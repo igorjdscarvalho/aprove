@@ -30,6 +30,7 @@ export interface MockState {
 export const MOCK_VERSION = 3;
 export const DEMO_SLUG = 'demo-marca-abc123';
 export const DEMO_PASSWORD = 'demo1234';
+export const MOCK_CLIENT_SLUGS = [DEMO_SLUG, 'cafe-brasa-x9k2m1'] as const;
 
 /** Imagem fictícia (SVG em data URI): gradiente + rótulo. Sem arquivos externos. */
 export function fakeImage(label: string, w: number, h: number, hue: number): string {

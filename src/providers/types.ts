@@ -10,8 +10,8 @@ export interface GateResult {
 }
 
 /**
- * Tudo que o lado do cliente precisa. Hoje a implementação é o MockProvider;
- * na Fase 7 entra o SupabaseProvider, sem mudar nenhuma tela (seção 10.0).
+ * Tudo que o lado do cliente precisa. A rota pública escolhe entre o provider
+ * mock (slugs de demonstração) e o Supabase (clientes reais), sem duplicar telas.
  */
 export interface ClientDataProvider {
   gate(slug: string): Promise<GateResult>;

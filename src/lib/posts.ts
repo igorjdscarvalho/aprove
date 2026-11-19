@@ -1,6 +1,7 @@
+import { IG } from '@/config/instagram';
 import { monthKeyOf } from '@/lib/dates';
 import type { MonthFilterState } from '@/hooks/useMonthFilter';
-import type { Post } from '@/types/domain';
+import type { Post, PostType } from '@/types/domain';
 
 export type GridTab = 'posts' | 'reels';
 
@@ -22,3 +23,14 @@ export const monthStories = (posts: Post[], f: MonthFilterState): Post[] =>
 /** Miniatura da grade: Reels usa a capa; imagem e carrossel usam a 1ª mídia. */
 export const thumbPath = (p: Post): string =>
   p.type === 'reel' ? (p.cover_path ?? p.media[0]?.poster_path ?? '') : (p.media[0]?.path ?? '');
+
+/** Proporção (largura/altura) usada para desenhar a mídia do post. */
+export const postRatio = (p: Post): number =>
+  p.aspect_ratio === '9:16' ? IG.REEL_STORY_RATIO : IG.FEED_RATIOS[p.aspect_ratio];
+
+export const TYPE_LABEL: Record<PostType, string> = {
+  image: 'Imagem',
+  carousel: 'Carrossel',
+  reel: 'Reels',
+  story: 'Story',
+};
