@@ -2,7 +2,7 @@
 
 **Projeto:** Plataforma de aprovação de conteúdo para Instagram (simulador de perfil + fluxo de aprovação por cliente)
 **Stack:** GitHub Pages (front estático) + Supabase (Auth, Postgres, Storage, Edge Functions opcionais)
-**Versão do documento:** v21 — **Última atualização:** 19/11/2026 (v21: usuário validou com sucesso o link real, senha, sessão, logout e indisponibilidade quando arquivado; P27 fechado; próximo passo é commit/push, que dispara o deploy automático, e depois E3)
+**Versão do documento:** v25 — **Última atualização:** 19/11/2026 (usuário confirmou E3 funcionando após E3.1 e autorizou deploy seguido da E4)
 **Natureza:** documento **vivo** — é atualizado a cada tarefa concluída (o que deu certo, o que não deu, por quê)
 
 > Este arquivo é a **fonte da verdade** do projeto. Quem for continuar o desenvolvimento (você ou uma nova sessão com o Claude) deve ler primeiro as seções 0 e 1, atualizar o **Painel de progresso** ao terminar cada tarefa e só então seguir para a próxima fase.
@@ -128,16 +128,16 @@ Não usar o nome/logo do Instagram nem copiar ícones proprietários. Usar ícon
 | **2** | **Painel admin sobre o protótipo** (dados locais): dashboard, formulário de cliente, editor de post, preview, caixa de entrada | `[~]` (feito no HTML único; falta validação do usuário e refazer no Vite) |
 | **3** | Contas e ferramentas (Supabase, GitHub, Node) | `[~]` (projeto Supabase, URL/chave pública, cadastro desligado, repo, Node/Git e Pages em GitHub Actions confirmados; falta anotar as quotas totais do plano) |
 | **4** | Supabase: schema, RLS, RPCs, Storage | `[x]` (migrações 001 a 007 aplicadas no Supabase real; admin criado; `security_checks.sql` com 39 PASS; conferência REST manual ok) |
-| **5** | Integração admin: Auth real, clientes reais, deploy automático | `[~]` (Etapas 1–2 anteriores concluídas; **E1 cliente validada pelo usuário em 19/11/2026**, com pequenos refinamentos visuais nos stories; **E2 admin real entregue para validação** (`npm run build` passou; falta login/CRUD no Supabase real pelo usuário); E3 a E5 não iniciadas; D30) |
-| **6** | Posts e uploads reais (imagem, carrossel, Reels, stories) | `[ ]` |
-| **7** | Acesso real do cliente: gate, senha, sessão, feed do banco | `[~]` (usuário validou gate, senha, sessão e logout; feed real sem posts até a E3) |
+| **5** | Integração admin: Auth real, clientes reais, deploy automático | `[~]` (E1 aceita; E2 entregue e usuário confirmou que os fluxos/deploy estão funcionando; P26 mantém itens admin residuais sem validação item a item; D30) |
+| **6** | Posts e uploads reais (imagem, carrossel, Reels, stories) | `[x]` (E3 aceita pelo usuário; build e validações locais confirmados; deploy autorizado) |
+| **7** | Acesso real do cliente: gate, senha, sessão, feed do banco | `[~]` (usuário validou gate, senha, sessão, logout e feed com posts reais; ainda faltam bloqueio após tentativas e checklist de CSP/rotas) |
 | **8** | Aprovações reais + caixa de entrada em tempo real | `[~]` (`client_submit_review` ligado ao painel do cliente; falta validar com posts reais; inbox/Realtime no admin ainda não iniciados) |
 | **9** | Polimento, acessibilidade, performance, segurança, QA | `[ ]` |
 | **10** | Go-live e rotina de manutenção | `[ ]` |
 
 Os checklists detalhados de cada fase ficam na seção 16 (marcar lá também).
 
-**Próximo passo imediato:** fazer commit das alterações E1+E2+patch v20 que ainda estão no working tree e enviá-las para `main`. O push dispara o workflow de GitHub Pages; aguardar o deploy verde e abrir o link real publicado uma vez para confirmar o patch v20 em produção. Depois, começar a **E3 (posts, uploads e workspace)**. A validação do link/senha/sessão foi concluída pelo usuário; o aceite geral da E2 continua parcial (P26), pois faltam itens do roteiro admin como avatar, filtros e exclusão.
+**Próximo passo imediato:** E3 foi aceita: o usuário informou que está tudo certo após corrigir e rodar novamente o build. Fazer commit/push no `main` e confirmar o workflow do GitHub Pages; em seguida continuar a E4 (ReviewInbox com Realtime, métricas e acabamento do ciclo de aprovação real). P26 segue como lembrete de validações administrativas da E2 não relatadas item a item, sem bloquear E4.
 
 ---
 
@@ -179,6 +179,7 @@ Os checklists detalhados de cada fase ficam na seção 16 (marcar lá também).
 | D31 | **Stories no desktop:** painel de aprovação translúcido com desfoque; setas menores e discretas, com chevrons centralizados; clicar na área externa fecha o visualizador; ícone X com traço mais forte. No mobile o painel continua opaco na parte inferior | Pedido visual do usuário após validar a E1 | Sim |
 | D32 | Login do admin usa o e-mail e a senha da conta criada em **Supabase Authentication → Users**, e essa conta precisa estar associada à tabela `public.admins`. `demo1234` é somente a senha fictícia do cliente Studio Aurora via `MockProvider`; não serve no login do admin | Esclarecimento solicitado pelo usuário para distinguir as duas telas de login | Não |
 | D33 | A rota pública escolhe o `SupabaseClientProvider` para slugs reais e mantém o `MockProvider` somente para os dois slugs de demonstração. O token Supabase fica em `localStorage` com a chave `supabase:cli_token:<slug>`, separada do token mock; gate, login, feed, logout e envio de aprovação usam as RPCs existentes | O link real copiado no admin abria a rota pública, que ainda consultava somente o seed local e tratava todo slug novo como indisponível | Sim |
+| D34 | O envio de arquivos E3 usa upload simples até 6 MB e protocolo TUS manual em blocos de 6 MB acima disso, com progresso, retomada pelo offset do servidor, retry e cache local da sessão de upload. Uploads usam a sessão Supabase Auth do admin; arquivos substituídos/removidos são limpos após salvar ou cancelar | O projeto não tinha cliente TUS instalado; manter poucas dependências e suportar arquivos até 50 MB no Storage existente | Sim |
 
 ---
 
@@ -1458,19 +1459,19 @@ jobs:
 
 ### 16.0 Plano acelerado em 5 entregas (D30) — **APROVADO pelo usuário (19/11/2026)**
 
-> Agrupa as fases restantes (1.8 em diante, 5, 6, 7, 8, 9, 10) em **5 entregas**. As fases e os critérios de aceite abaixo (seção 16) **continuam valendo**; o que muda é como o trabalho é empacotado. Estado: **E1 validada; E2 entregue, validação Supabase pendente; E3 não iniciada; patch iniciou parte da E4 (gate/login/feed/logout/aprovação no cliente), ainda aguardando validação; inbox/realtime e métricas do admin seguem pendentes**.
+> Agrupa as fases restantes (1.8 em diante, 5, 6, 7, 8, 9, 10) em **5 entregas**. As fases e os critérios de aceite abaixo (seção 16) **continuam valendo**; o que muda é como o trabalho é empacotado. Estado: **E1 e E3 aceitas; E2 entregue e fluxos/deploy confirmados pelo usuário (P26 guarda itens residuais); parte da E4 (gate/login/feed/logout/aprovação no cliente) já foi integrada e validada nos fluxos básicos; caixa de entrada/Realtime e métricas do admin são o próximo trabalho E4**.
 
 | Entrega | Escopo | Tarefas cobertas | Quando está pronta (aceite) | Risco |
 |---|---|---|---|---|
 | **E1 · Cliente completo no Vite** (antigos 2c + 2d + 2e) | `PostViewer` + `Caption`, `Carousel`, `ReelPlayer` + `PlayerHUD`, `StoryViewer` + `ApprovalPanel`, responsividade, temas e skeletons; painel de aprovação dos stories refinado em D31 | 1.8 a 1.13 (1.14 cancelado, D26) | Aceite da Fase 1: fluxo completo do cliente e avaliação visual do usuário | **Validada pelo usuário em 19/11/2026** |
-| **E2 · Admin real** (Fase 5) | Login real (`signInWithPassword`) + `AdminGuard` com `is_admin()`; dashboard (busca, abas por status, contadores via `admin_client_counters`); `ClientForm` com avatar real (recorte circular + Storage); senha real (`admin_set_client_password`), modal de senha ao publicar (D18), revogar sessões, destravar; arquivar/excluir com confirmação e remoção de arquivos; `noindex` + CSP. **Sem `AdminDataProvider` mock**: vai direto ao Supabase | 5.1 a 5.6 | Aceite da Fase 5: criar/editar/arquivar/excluir cliente persiste de verdade; `client_gate` reflete o status | **Implementada; build passou em 19/11/2026. Falta validação do usuário no Supabase real.** |
-| **E3 · Posts e uploads reais** (Fase 6) + workspace do cliente | `lib/media`, `lib/storage` (upload simples + TUS com progresso), `MediaUploader`; `PostEditor` dos 4 tipos + `PhonePreview` + `CoverCropper` (recorte 3:4 e frame do vídeo); carrossel reordenável por arrastar (pointer events, sem `dnd-kit`); workspace com abas Feed (**reusa os componentes do cliente em modo `adminPreview`, resolve P9**), Publicações e Configurações; lista com filtros, ocultar/mostrar e excluir (apagando arquivos); "Reenviar para aprovação" (`revision`) | 6.1 a 6.4, parte de 6.5 (excluir), 6.6 | Aceite da Fase 6: um post de cada tipo persiste; Reels com capa e recorte certos após recarregar; excluir remove os arquivos; vídeo próximo de 50 MB sobe | **Alto** (é a maior; se estourar, vira E3 + patch, não nova entrega) |
-| **E4 · Cliente real + aprovações + caixa de entrada** (Fases 7 e 8) | Provider Supabase do cliente (`client_gate`, `client_login`, `client_get_feed`, `client_logout`, token por slug) e `ApprovalPanel` real (`client_submit_review`; `unauthorized`, `rate_limited`, `comment_required`) — **parte integrada e fluxo de gate/senha/sessão validado no patch v20**; admin: selos e contadores reais, aba Aprovações, `ReviewInbox` com Realtime e "marcar como lida", aba Métricas (RF-A11, D21), reenvio mantendo histórico | 7.1 a 7.4, 8.1 a 8.3 | Aceites das Fases 7 e 8. **Marco: produto usável com cliente real** (ciclo completo admin → link → cliente aprova → admin vê) | Baixo a médio (RPCs já validadas com 39 PASS) |
+| **E2 · Admin real** (Fase 5) | Login real (`signInWithPassword`) + `AdminGuard` com `is_admin()`; dashboard (busca, abas por status, contadores via `admin_client_counters`); `ClientForm` com avatar real (recorte circular + Storage); senha real (`admin_set_client_password`), modal de senha ao publicar (D18), revogar sessões, destravar; arquivar/excluir com confirmação e remoção de arquivos; `noindex` + CSP. **Sem `AdminDataProvider` mock**: vai direto ao Supabase | 5.1 a 5.6 | Aceite da Fase 5: criar/editar/arquivar/excluir cliente persiste de verdade; `client_gate` reflete o status | **Implementada; usuário disse que os fluxos existentes estão funcionando; P26 ainda acompanha verificações administrativas residuais.** |
+| **E3 · Posts e uploads reais** (Fase 6) + workspace do cliente | `lib/media`, `lib/storage` (upload simples + TUS resumível com progresso); `MediaUploader`; editor dos 4 tipos com prévia de perfil, `CoverCropper` (recorte 3:4 e frame do vídeo); carrossel reordenável por pointer events; workspace Feed (**reusa os componentes do cliente em modo `adminPreview`, resolve P9**), Publicações e Configurações; filtros, ocultar/mostrar, excluir com arquivos e reenviar para aprovação (`revision`). Prévia do celular é integrada ao editor, sem componente separado. | 6.1 a 6.4, exclusão de 6.5; duplicação segue para E5; 6.6 | **Aceita pelo usuário em 19/11/2026**, após build corrigido e validação dos fluxos E3 | Entregue; aceite do usuário |
+| **E4 · Cliente real + aprovações + caixa de entrada** (Fases 7 e 8) | Provider Supabase do cliente (`client_gate`, `client_login`, `client_get_feed`, `client_logout`, token por slug) e `ApprovalPanel` real (`client_submit_review`; `unauthorized`, `rate_limited`, `comment_required`) — **parte integrada e fluxo de gate/senha/sessão validado no patch v20**; admin: selos e contadores reais, aba Aprovações, `ReviewInbox` com Realtime e "marcar como lida", aba Métricas (RF-A11, D21), reenvio mantendo histórico | 7.1 a 7.4, 8.1 a 8.3 | Aceites das Fases 7 e 8. **Marco: produto usável com cliente real** (ciclo completo admin → link → cliente aprova → admin vê) | Autorizada pelo usuário; iniciar após publicar E3 |
 | **E5 · Acabamento e go-live** (Fases 9 e 10) | Acessibilidade, Lighthouse mobile ≥ 90, checklist de segurança 17.2 completo, QA 17.3, revisão de textos; duplicar com cópia de arquivos e ação em lote (6.5); pendências P11, P16, P17, P22; rotina de backup (14.4); primeiro ciclo com cliente real; registrar a data do go-live | 6.5 (duplicar/lote), 9.1 a 9.5, 10.1 a 10.4 | Aceite das Fases 9 e 10 | Baixo |
 
 **Regras para não perder velocidade nem qualidade**
-1. Uma entrega = **um zip** com todos os arquivos + um **roteiro de teste numerado** (10 a 15 itens) + lista de arquivos novos/alterados. O usuário faz **commit antes** de aplicar (volta fácil se algo quebrar).
-2. Cada entrega é montada por dentro em subpartes (a, b, c) e conferida aqui (lógica em Node, sintaxe dos `.tsx`) antes de empacotar.
+1. Uma entrega = alterações na pasta compartilhada do projeto + **roteiro de teste numerado** (10 a 15 itens) + lista de arquivos novos/alterados. Não gerar zip quando o código já está na pasta do projeto; o usuário faz o commit **depois da validação** para não registrar algo que ainda precise de patch.
+2. Cada entrega é montada por dentro em subpartes (a, b, c) e revisada estaticamente; build, integração com o Supabase e aceite visual ficam no computador do usuário quando essa for a preferência combinada.
 3. O `npm run build` no PC segue sendo o teste de tipos real (P23). O usuário cola o erro, eu corrijo. **Correção de erro = patch** (E3.1, E3.2…), **não conta como entrega nova**.
 4. Este `.md` continua sendo atualizado a cada entrega **e a cada patch** (0.5).
 5. Tempo de teste por entrega sobe de 15–30 min para **45–90 min**.
@@ -1607,18 +1608,33 @@ Rode `npm run build`; depois `npm run dev` e abra `http://localhost:5173/aprove/
 
 ### Fase 6 — Posts e uploads reais
 **Tarefas**
-- [ ] 6.1 `lib/media.ts` (dimensões, resize, poster de vídeo, duração).
-- [ ] 6.2 `lib/storage.ts` (upload simples + TUS com progresso, remoção, `copy`).
-- [ ] 6.3 `MediaUploader` real (fila, progresso, cancelar/repetir, aviso ao sair com upload em andamento).
-- [ ] 6.4 `SupabaseProvider` (posts, mídias, capas, recorte da grade, revisões).
-- [ ] 6.5 Duplicar com cópia de arquivos; excluir post/mídia apagando arquivos.
-- [ ] 6.6 Teste com vídeo real próximo do limite de tamanho.
+- [x] 6.1 `lib/media.ts` (dimensões, resize, poster de vídeo, duração); validado pelo usuário na E3.
+- [x] 6.2 `lib/storage.ts` (upload simples + TUS com progresso, remoção, `copy`); protocolo TUS manual sobre o endpoint do Supabase, validado pelo usuário na E3.
+- [x] 6.3 `MediaUploader` real (fila, progresso, interromper/retomar, aviso ao sair com upload em andamento); validado pelo usuário na E3.
+- [x] 6.4 Provider de posts do Supabase (posts, mídias, capas, recorte da grade, revisões); validado pelo usuário na E3.
+- [~] 6.5 Excluir post/mídia apagando arquivos; implementado. Duplicar com cópia de arquivos foi mantido para E5 pelo D30.
+- [x] 6.6 Teste com vídeo real próximo do limite de tamanho; usuário aceitou a E3 em 19/11/2026.
 
 **Aceite:** um post de cada tipo persistido; Reels com capa e recorte corretos após recarregar; excluir remove os arquivos; falha de rede no upload permite retomar.
 
+#### Roteiro manual E3 — a executar no computador do usuário
+1. Na pasta do projeto, rode `npm run build`. Se houver erro, pare e envie o texto completo; não faça commit ainda.
+2. Rode `npm run dev`, entre no admin e abra **Abrir** no cliente de teste. Use um cliente publicado para confirmar o feed público; rascunhos ocultos não devem aparecer.
+3. Crie uma **Imagem única** com legenda, localização, proporção 4:5 e data. Salve e confirme que volta à lista sem erro.
+4. Recarregue o espaço do cliente e edite a imagem; confira arquivo, legenda, data e status. Publique para o cliente e confirme a imagem no Feed e no link público daquele cliente.
+5. Crie um **Carrossel** com duas imagens e um vídeo (se tiver), arraste itens para outra ordem, salve, reabra e confirme ordem/miniatura; abra no Feed e avance os slides/vídeo.
+6. Crie um **Reels** MP4, escolha um frame ou envie capa, ajuste o recorte 3:4 e salve. Recarregue e confirme capa, crop, reprodução e posição na grade/Reels.
+7. Crie um **Story** de imagem e outro de vídeo. Ajuste a duração da imagem; confirme reprodução do vídeo e navegação pelos stories no Feed.
+8. Salve uma publicação como rascunho/oculta; ela deve aparecer no admin com “Rascunho oculto”, mas não no feed nem no link do cliente. Use **Mostrar** e confirme que passa a aparecer.
+9. Confira filtros por tipo, status e mês na aba Publicações; depois use ocultar/mostrar para alternar uma publicação existente.
+10. Em uma publicação com histórico de avaliação, edite e deixe **Reenviar para aprovação** ligado. Confirme que a revisão aumenta, o status volta a Pendente e o histórico anterior permanece; repita sem marcar para conferir que o estado é mantido.
+11. Exclua um post de teste e confirme que desaparece da lista/feed e que suas mídias/capas deixam de abrir no Storage público.
+12. Envie um vídeo maior que 6 MB; observe progresso. Interrompa o envio e tente salvar novamente para confirmar a retomada. Depois faça um envio de vídeo próximo de 50 MB, se tiver um arquivo disponível.
+13. Se qualquer passo falhar, anote número do passo, mensagem/print e se aconteceu no build, no admin ou no link público. Não precisa testar pelo site publicado antes de commit/push; o teste local usa os dados reais do Supabase.
+
 ### Fase 7 — Acesso real do cliente
 **Tarefas**
-- [~] 7.1 Provider Supabase do cliente: `client_gate`, `client_login`, `client_get_feed`, `client_logout`, token isolado por slug em `localStorage`. *(gate, sessão e logout validados pelo usuário; feed com posts reais fica para depois da E3)*
+- [x] 7.1 Provider Supabase do cliente: `client_gate`, `client_login`, `client_get_feed`, `client_logout`, token isolado por slug em `localStorage`. *(gate, sessão, logout e feed com posts reais validados pelo usuário)*
 - [~] 7.2 `ClientEntry`/`Gate` para clientes reais com bloqueio por tentativas e mensagens corretas. *(gate, senha errada/correta e perfil publicados validados pelo usuário; bloqueio por tentativas ainda não testado)*
 - [ ] 7.3 Garantir que rotas do cliente não renderizam nada do admin.
 - [ ] 7.4 Revisar CSP e URLs de mídia públicas no ambiente real.
@@ -1627,7 +1643,7 @@ Rode `npm run build`; depois `npm run dev` e abra `http://localhost:5173/aprove/
 
 ### Fase 8 — Aprovações reais + caixa de entrada
 **Tarefas**
-- [~] 8.1 `client_submit_review` integrado ao `ApprovalPanel` (atualização otimista + reconciliação, tratamento de `unauthorized`, `rate_limited`, `comment_required`). *(integração no patch v20; validação real depende de posts da E3)*
+- [x] 8.1 `client_submit_review` integrado ao `ApprovalPanel` (atualização otimista + reconciliação, tratamento de `unauthorized`, `rate_limited`, `comment_required`). *(integração e teste com posts reais aceitos pelo usuário em 19/11/2026)*
 - [ ] 8.2 Admin: selos e contadores reais, aba Aprovações, `ReviewInbox`, Realtime, "marcar como lida".
 - [ ] 8.3 Reenvio de nova revisão (volta a `pending`, mantém histórico por revisão).
 
@@ -1763,7 +1779,7 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 > Atualizar **a cada tarefa** (regra 0.2). Não apagar registros; marcar como resolvidos.
 
 ### 22.1 Próximo passo
-**(19/11/2026)** A E1 foi aceita; os refinamentos dos stories foram aplicados (D31). A E2 (Auth/admin real) está entregue e aguarda validação completa no Supabase (P26). O usuário copiou o link de um cliente publicado, mas a rota ainda consultava somente o `MockProvider`; por isso o slug real aparecia indisponível. O patch v20 agora liga os links reais a `client_gate`, `client_login`, `client_get_feed`, `client_logout` e `client_submit_review`; o teste manual está na seção “Patch v20” logo após o roteiro E2. Validar esse fluxo antes de commit/push; o feed vazio é esperado até a E3 criar posts reais. Depois do aceite, iniciar **E3 (posts, uploads e workspace)**. Pendências gerais: observar execução de `keepalive.yml` (P19), P16, P17, P22 e P11.
+**(19/11/2026)** E1 aceita. O usuário confirmou que o deploy e os fluxos existentes estão funcionando e autorizou E3. A implementação E3 está na pasta de trabalho: workspace real do cliente, editor dos quatro tipos, persistência em `posts`/`post_media`, mídias no Storage simples/TUS, preview admin dos componentes do cliente, filtros, visibilidade, exclusão, recrop e reenvio de revisão. O usuário rodou `npm run build`; o TypeScript encontrou dois TS2345 porque `storySeconds` havia sido inferido como o literal 5. Corrigi em E3.1 com `useState<number>`; agora deve rodar `npm run build` novamente. Depois do build, seguir o roteiro manual E3 da seção 16; Supabase/Storage real e browser continuam sem validação. Corrigir os erros relatados em patch E3.1 etc.; só depois do aceite fazer commit/push e conferir o deploy. P26 continua aberto para itens admin residuais sem confirmação item a item; não bloqueia E3. Pendências gerais: P19, P16, P17, P22 e P11.
 
 **Estimativa de término (informada ao usuário em 19/11/2026):** falta cerca de 35% do trabalho, em 17 a 20 entregas (cada uma = 1 rodada de entrega + 15 a 30 min de teste do usuário): 2b a 2e (4), admin real (3), posts e uploads reais, Fase 6 (4), Fases 7 e 8 (3), Fases 9 e 10 (3). Em tempo do usuário, 15 a 25 horas (1 a 2 semanas dedicando tempo, 3 a 4 semanas com pouco tempo por dia). Produto usável com cliente real ao fim da Fase 8 (cerca de 14 entregas). Estimativa sujeita a mudar, em especial nas Fases 6 e 9.
 
@@ -1846,7 +1862,13 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | 19/11/2026 | Esclarecimento sobre credenciais | ✅ | Conferido em `AdminLogin.tsx`: `signInWithPassword`; o acesso ainda valida `is_admin()`. Registrado que é a conta real de Supabase Auth associada a `public.admins`; `demo1234` é só do cliente fictício Studio Aurora no `MockProvider` | — | `src/pages/admin/AdminLogin.tsx`, `src/providers/mock/seed.ts`, este arquivo |
 | 19/11/2026 | Patch v20: link público de cliente real | ⚠️ | Usuário relatou que um link recém-copiado para cliente publicado mostrava “Este link não está disponível”. Causa localizada: `ClientEntry` usava o `MockProvider`, cujo seed não contém clientes reais. Implementado `SupabaseClientProvider` com gate, login, feed, logout e aprovação via RPC; o token real usa chave `supabase:cli_token:<slug>` separada da chave mock. As rotas de demonstração continuam mock. Roteiro manual adicionado abaixo do roteiro E2; aguardando teste do usuário (sem build/teste executado nesta correção) | O feed pode ficar vazio até a E3 criar posts reais. A validação real depende do PC e do Supabase do usuário | `src/providers/supabase/SupabaseClientProvider.ts`, `src/pages/client/ClientEntry.tsx`, `src/pages/client/ClientFeed.tsx`, `src/providers/mock/seed.ts`, `src/providers/types.ts`, `src/providers/index.ts`, este arquivo |
 | 19/11/2026 | Validação manual do patch v20 | ✅ | Usuário informou que todas as verificações passaram: build, gate do cliente real, senha incorreta/correta, perfil, sessão após atualizar, logout e link indisponível quando arquivado. P27 fechado; próxima ação é commit/push para `main`, deploy automático pelo GitHub Pages e checagem do link em produção | O feed sem posts é esperado até a E3. P26 continua aberto para filtros/contadores, avatar, revogar/destravar e exclusão do admin | roteiro “Patch v20” na seção 16; este arquivo |
+| 19/11/2026 | Commit/push E1+E2+patch v20 | ✅ | Usuário concluiu o commit `4f5f371` (`Integra clientes reais ao Supabase`) e o push; `git status` confirmou `main...origin/main` sem alterações pendentes. Push deve acionar o workflow de deploy do GitHub Pages | Ainda falta conferir o workflow verde e testar o link de cliente no site publicado; não foi confirmado que o deploy terminou | commit `4f5f371`, GitHub Actions |
 |  |  |  |  |  |  |
+
+| 19/11/2026 | E3 · Posts, uploads e workspace | ⚠️ | Criados `lib/media.ts` e `lib/storage.ts` (simples + TUS), provider Supabase de posts, editor dos quatro tipos com prévia, crop/frame de capa, reordenação, workspace Feed/Publicações/Configurações, filtros, visibilidade, exclusão, histórico/reenvio de revisão; PostViewer e StoryViewer têm `adminPreview`; corrigidos estado antigo do editor, miniatura de carrossel com vídeo e limpeza de mídia nova no salvamento/cancelamento. Roteiro manual E3 incluído na seção 16 | **Não** foram executados `npm run build`, testes, navegador nem chamadas ao Supabase neste turno, conforme preferência do usuário; validar no PC antes de commit/push. P28 aberto; D34 registra TUS manual; duplicação segue E5 | `src/lib/media.ts`, `src/lib/storage.ts`, `src/providers/admin/SupabasePostProvider.ts`, `src/components/admin/`, `src/pages/admin/ClientWorkspacePage.tsx`, `src/pages/admin/PostEditorPage.tsx`, `src/App.tsx`, `src/components/ig/`, `src/lib/posts.ts`, este arquivo |
+
+| 19/11/2026 | Build E3 e patch E3.1 | ⚠️ | Primeiro `npm run build` do usuário mostrou dois TS2345 em `PostEditorPage.tsx`: o valor inicial `IG.STORY_DEFAULT_SECONDS` fez `useState` inferir o tipo literal `5`, mas o banco e o slider usam números entre 1 e 15. Alterado para `useState<number>(...)` | O build ainda precisa ser repetido pelo usuário; nenhum erro de integração/runtime foi reportado ainda | `src/pages/admin/PostEditorPage.tsx`, este arquivo |
+| 19/11/2026 | Aceite da E3 e autorização de deploy/E4 | ✅ | Usuário informou que está tudo certo após a correção E3.1 e autorizou seguir com deploy e E4. O build corrigido e os fluxos E3 passam a ser aceitos; iniciamos commit/push para `main` antes da E4 | O workflow do Pages ainda precisa concluir; P26 permanece como verificação administrativa residual, sem bloquear E4 | commits E3 em `main`; próximo trabalho: E4 |
 
 ### 22.3 O que deu certo (padrões a repetir)
 | Data | Contexto | O que funcionou | Por que funcionou |
@@ -1869,6 +1891,8 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | 19/11/2026 | Provider testado fora do navegador | Rodar o `MockProvider` em Node com `tsx` e um `localStorage` simulado | Valida a lógica (bloqueio, sessão, rascunho oculto) sem precisar do React nem do PC do usuário |
 | 19/11/2026 | Alinhar com o que o usuário aprovou | Comparar o CSS e os textos do protótipo antes de entregar a tela portada | Evita entregar uma tela "parecida" que muda o que o usuário já validou |
 | 19/11/2026 | Integração incremental do link real | Reutilizar os contratos RPC já existentes e injetar o provider selecionado na tela de cliente | Gate, feed e aprovação podem mudar para dados reais sem duplicar as telas da E1; os slugs de demonstração continuam independentes. O usuário confirmou o gate/senha/sessão em 19/11 |
+| 19/11/2026 | Upload E3 | Usar upload simples para arquivos pequenos e TUS para arquivos maiores que 6 MB; manter paths enviados no editor até salvar/cancelar | Barra de progresso e retomada sem dependência nova; a validação de rede real ainda precisa ser feita pelo usuário |
+| 19/11/2026 | Workspace E3 | Reutilizar `ProfileHeader`, `PostGrid`, `PostViewer` e `StoryViewer` em `adminPreview`, ligando-os ao provider real de posts | Evita manter uma tela de visualização diferente para o admin e para o cliente; preview não envia avaliações nem marca stories como vistos |
 |  |  |  |  |
 
 ### 22.4 O que não deu certo (evitar / alternativa adotada)
@@ -1891,21 +1915,24 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | 19/11/2026 | Validação manual da E1 neste ambiente | Abrir `localhost:5173/aprove/` no navegador automatizado e consultar o Supabase configurado | CUA: `ERR_CONNECTION_TIMED_OUT`; acesso HTTP local: socket bloqueado por permissões; chamadas Supabase: host não resolvido por DNS | Restrições de rede/socket do ambiente do agente; sem evidência de bug do projeto | O usuário confirmou depois que a E1 estava correta; aceite registrado. Para E2, entregar roteiro para execução na máquina do usuário | resolvido pelo aceite do usuário |
 | 19/11/2026 | Build E2 (tentativa inicial) | Referenciar `slugSuffix.current` ao montar o slug automático | TypeScript: `Property 'current' does not exist on type 'string'` | `slugSuffix` foi criado como valor imutável com `useMemo`, não como `useRef` | Usar `slugSuffix` diretamente; build seguinte passou | resolvido |
 | 19/11/2026 | Link público após E2 | Copiar e abrir o link de um cliente real publicado | A rota mostrava “Este link não está disponível” apesar do `client_gate` indicar disponível no admin | `ClientEntry` ainda chamava somente o `MockProvider`; o seed contém apenas slugs de demonstração, então o cliente real parecia inexistente | Ligar clientes reais ao `SupabaseClientProvider` e às RPCs existentes; manter mock apenas para slugs de demonstração | resolvido (usuário validou gate, senha, sessão, logout e arquivamento em 19/11/2026) |
+| 19/11/2026 | Revisão estática da E3 | O primeiro rascunho do editor ainda chamava `setVisibleAfterSave`, embora a visibilidade já viesse dos botões Salvar rascunho/Publicar | Referência a estado inexistente, detectada antes de build ou execução | Restou uma linha de carregamento da versão anterior do editor | Removida a chamada; a visibilidade continua sendo enviada pelo botão usado ao salvar. Build não executado por preferência do usuário | corrigido antes da validação manual |
 |  |  |  |  |  |  |  |
 
+| 19/11/2026 | Primeiro build E3 | `npm run build` | TS2345: `number` não podia ser atribuído a `SetStateAction<5>` nas linhas do carregamento e do slider de duração do story | TypeScript inferiu o estado a partir da constante inicial literal `5` | Tipar explicitamente o estado como `useState<number>(IG.STORY_DEFAULT_SECONDS)`; usuário repetiu o build e confirmou que está tudo certo | resolvido pela E3.1 (19/11/2026) |
+
 ### 22.5 Problemas conhecidos em aberto
-| # | Descrição | Impacto | Fase afetada | Status (aberto/resolvido) | Observações |
+| # | Descrição | Impacto | Fase afetada | Status (aberto/em validação/resolvido) | Observações |
 |---|---|---|---|---|---|
-| P1 | Vídeos enviados no admin não persistem após recarregar (imagens persistem no `localStorage`, reduzidas a 1080px) | Baixo (esperado) | 2 | aberto | Resolvido pela Fase 6; após recarregar o Reels volta ao vídeo simulado e o story em vídeo mostra só o frame (o editor avisa) |
+| P1 | Vídeos enviados no admin não persistiam após recarregar (limitação do protótipo) | Baixo (esperado) | 2 | resolvido (19/11/2026) | E3 grava vídeos reais no Storage e mantém metadados no Supabase; usuário validou os fluxos da E3 |
 | P2 | Stories no protótipo só têm imagem (5 s); story em vídeo ainda não foi prototipado | Médio | 1 | resolvido (18/11/2026) | Story em vídeo no HTML (barra segue o vídeo, pausa, som, avança no fim). Refazer no Vite (11.9) |
-| P3 | Vídeo do Reels no protótipo é simulado; áudio/volume só são reais com "Testar com meu vídeo" | Baixo | 1 | aberto | Resolvido com mídia real (Fase 6) |
+| P3 | Vídeo do Reels no protótipo era simulado; áudio/volume só eram reais com "Testar com meu vídeo" | Baixo | 1 | resolvido (19/11/2026) | E3 integra `<video>` real ao Reels; usuário aceitou upload e reprodução real |
 | P4 | Tela de senha (1.4) no protótipo em arquivo único | Baixo | 1 | resolvido (18/11/2026) | Refazer no projeto Vite com o `MockProvider` |
 | P5 | Usuário só testou o celular; falta validar o desktop (modal em 2 colunas) | Médio | 1 | aberto | Pedir feedback do desktop |
-| P6 | Cota do `localStorage` (cerca de 5 MB): muitas imagens grandes podem estourar | Baixo | 2 | aberto | O app avisa e segue só em memória; Supabase Storage resolve na Fase 6 |
-| P7 | Admin sem login real: a sessão fica só na aba (`sessionStorage`) | Baixo (esperado) | 2 | aberto | Auth real na Fase 5 |
+| P6 | Cota do `localStorage` (cerca de 5 MB): muitas imagens grandes podem estourar | Baixo | 2 | resolvido (19/11/2026) | E3 envia mídias para o Supabase Storage, em vez de persistir arquivos grandes no `localStorage`; usuário aceitou a E3 |
+| P7 | Admin sem login real: a sessão fica só na aba (`sessionStorage`) | Baixo (esperado) | 2 | resolvido (19/11/2026) | E2 usa Supabase Auth persistente e `AdminGuard` via `is_admin()` |
 | P8 | Avatar sem recorte circular (só reduz a 300px) | Baixo | 2 | resolvido (18/11/2026) | Modal com arrastar e zoom, saída 300x300 |
-| P9 | Aba Feed do workspace é grade editável, não o componente do cliente em modo `adminPreview` | Médio | 2 | aberto | Resolver no projeto Vite, com componente compartilhado (seção 9) |
-| P10 | Carrossel reordena por botões ‹ ›, sem arrastar (dnd-kit) | Baixo | 2 | resolvido (18/11/2026) | Arrastar com pointer events no HTML; no Vite usar dnd-kit |
+| P9 | Aba Feed do workspace era grade diferente do feed do cliente | Médio | 2 | resolvido (19/11/2026) | E3 usa os componentes do cliente em `adminPreview` no workspace Vite |
+| P10 | Carrossel reordena por botões ‹ ›, sem arrastar (dnd-kit) | Baixo | 2 | resolvido (19/11/2026) | HTML já usava pointer events; E3 também implementa arrastar com pointer events no editor Vite, sem adicionar `dnd-kit` |
 | P11 | Admin e cliente ainda não testados em celular real e no desktop pelo usuário | Médio | 1-2 | aberto | Pedir validação |
 | P12 | O backup exportado contém as senhas dos clientes em texto (só no protótipo) | Baixo | 2 | aberto | Guardar o arquivo com cuidado; no Supabase só existe hash (D4) |
 | P13 | Definições das métricas (D21) escolhidas sem confirmação do usuário | Baixo | 2 | aberto | Pedir validação |
@@ -1915,14 +1942,15 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | P17 | Quotas totais do plano Free (banco, Storage, egress) não anotadas | Médio | 3, 6 | aberto | Conferir em Supabase Plans/Billing e registrar em 8.4 |
 | P18 | Node LTS, Git, repositório `aprove` e Pages (*GitHub Actions*) | Médio | 3, 5 | resolvido (19/11/2026) | Node/Git/repo conferidos; Pages em GitHub Actions ativado; workflow de deploy ficou verde e o site abriu com as quatro verificações OK, segundo o usuário |
 | P19 | Confirmar que o workflow agendado `keepalive.yml` executa no GitHub Actions | Médio | 5 | aberto | O arquivo existe, chama `ping()` a cada 3 dias e tem `workflow_dispatch`; ainda falta observar uma execução. Repositório público pode desativar workflows após 60 dias sem atividade |
-| P20 | Código da Etapa 1: `npm install`, `npm run dev` (4 OK) e `npm run build` (sem erros, 19/11/2026) funcionaram no PC do usuário | Baixo | 5 | resolvido (19/11/2026) | Resta a Parte B (deploy) |
+| P20 | Código da Etapa 1: `npm install`, `npm run dev` (4 OK) e `npm run build` (sem erros, 19/11/2026) funcionaram no PC do usuário | Baixo | 5 | resolvido (19/11/2026) | Parte B concluída: secrets, Pages, push e deploy publicados; workflow verde informado pelo usuário |
 | P21 | Versões das dependências em faixas `^` sem consulta ao npm | Baixo | 5 | parcial | Usuário no Windows: Node v26.13.0, npm 11.20.0, Git 2.56.1 (18/11/2026), compatíveis com Vite 5 e Tailwind 3; o workflow usa Node 22 (sem impacto). O `package-lock.json` gerado no primeiro `npm install` fixa as versões e deve ir ao Git |
 | P22 | `npm install` mostrou: **4 vulnerabilities (3 moderate, 1 high)** e o aviso do npm 11 *install-scripts* (esbuild 0.21.5 com postinstall não coberto por `allowScripts`). Nada quebrou. **Não** usar `npm audit fix --force` (sobe versões maiores e quebra o projeto) | Baixo | 5 | aberto | Provavelmente só ferramentas de desenvolvimento (Vite 5/esbuild). Rodar `npm audit` e avaliar; se o esbuild acusar erro, usar `npm install-scripts approve esbuild`. Reavaliar ao atualizar para Vite mais novo |
 | P23 | Bloco 2a sem teste no PC: os `.tsx` não foram checados com os tipos reais do React/Router | Baixo | 2 | resolvido (19/11/2026) | `npm run build` passou e o 2a funcionou no navegador. Vale para cada bloco: o build no PC é o teste de tipos real |
-| P24 | Plano acelerado (D30): entregas maiores aumentam a chance de erro de tipo ou integração só aparecer durante a validação manual | Médio | 2-8 | aberto (risco) | Builds E1/E2 passaram aqui; aceite visual da E1 confirmado pelo usuário. Para Auth, CRUD e Storage da E2, usar roteiro manual; manter builds e commits por entrega. Maior risco: E3 (uploads, vídeo, TUS) |
+| P24 | Plano acelerado (D30): entregas maiores aumentam a chance de erro de tipo ou integração só aparecer durante a validação manual | Médio | 2-8 | aberto (risco) | E3 entregue para build/teste manual do usuário; validar no Windows, Supabase Storage, vídeo e TUS pelo roteiro. Corrigir por patch antes do push |
 | P25 | Aceite manual da E1 aguardava teste no computador do usuário | Médio | 1 | resolvido (19/11/2026) | Usuário confirmou que a E1 estava correta; refinamentos visuais desktop de stories foram aplicados em D31 |
-| P26 | Validação completa da E2 contra o Supabase real ainda pendente | Médio | 5 | aberto | Usuário criou/publicou cliente e validou link, senha, sessão e arquivamento. Ainda faltam itens do roteiro admin, como filtros/contadores, avatar, revogar/destravar e exclusão |
+| P26 | Validação item a item de alguns fluxos administrativos da E2 não foi registrada | Médio | 5 | aberto | Usuário informou que está tudo funcionando; manter como lembrete porque filtros/contadores, avatar, revogar/destravar e exclusão não foram relatados individualmente. Não bloqueia E3 |
 | P27 | Link público de cliente real mostrava indisponível até a integração do provider Supabase | Alto | 7-8 | resolvido (19/11/2026) | Causa registrada na 22.4. Patch v20 usa as RPCs existentes; o usuário validou gate, senha, sessão após atualizar, logout e estado arquivado. Feed sem posts é esperado até a E3 |
+| P28 | Build e validação real da E3 | Alto | 6 | resolvido (19/11/2026) | Primeiro build apontou TS2345 em `storySeconds`; E3.1 tipou o estado como `number`. O usuário informou que o build seguinte e a validação da entrega passaram |
 
 ### 22.6 Histórico de mudanças do plano
 | Versão | Data | Mudança | Motivo |
@@ -1937,6 +1965,10 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | v19 | 19/11/2026 | Esclarecido que o login admin usa Supabase Auth e que `demo1234` pertence apenas ao cliente fictício; detalhe registrado em D32, seção 12.2, roteiro E2 e Diário | Usuário perguntou se o login ainda era fictício |
 | v20 | 19/11/2026 | Corrigido o fluxo do link público real com `SupabaseClientProvider` (gate, login, feed, logout e envio de aprovação); preservadas as rotas mock de demonstração; adicionado roteiro de validação e aberto P27 até aceite manual | Usuário testou o link de cliente publicado e encontrou a tela de indisponível |
 | v21 | 19/11/2026 | Usuário validou o patch v20: link público, senha, sessão, logout e indisponibilidade do cliente arquivado. P27 fechado; próximo passo atualizado para commit/push e deploy automático antes de iniciar E3; P26 permanece aberto para os itens restantes do admin | Usuário informou que todas as validações do link passaram e perguntou se o próximo passo é deploy |
+| v22 | 19/11/2026 | Commit `4f5f371` com E1+E2+patch v20 enviado para `origin/main`; working tree limpo. Próximo passo: confirmar GitHub Actions verde e link público atualizado antes da E3 | Usuário informou “Foi”; Git confirmou branch sincronizada com `origin/main` |
+| v23 | 19/11/2026 | E3 implementada no workspace: upload simples/TUS, processamento de imagens/vídeos, provider Supabase de posts, editor dos quatro tipos, Feed adminPreview, filtros/visibilidade/exclusão e reenvio de revisão; roteiro manual E3 adicionado; P9/P10 resolvidos no Vite, P28 aberto; estado obsoleto removido e miniatura de carrossel com vídeo corrigida | Usuário informou que os fluxos existentes estão funcionando e autorizou iniciar E3; pediu que as validações sejam feitas por ele no computador |
+| v24 | 19/11/2026 | Corrigido o erro TS2345 do primeiro build E3: o estado `storySeconds` passa a ser `number`, compatível com `post.story_seconds` e o slider de 1–15 s. P28 atualizado; aguardando novo `npm run build` do usuário | Usuário enviou os dois erros de tipo da primeira validação E3 |
+| v25 | 19/11/2026 | Usuário confirmou E3 funcionando após E3.1 e autorizou deploy seguido da E4. Fase 6 e critérios E3 aceitos; P1/P3/P6/P28 resolvidos; 7.1 e 8.1 real validados. Próximo passo: commit/push do E3 e confirmação do Pages; depois E4 | Usuário informou “Tudo certo, podemos seguir com o deploy e ir para E4” |
 | v15 | 19/11/2026 | Bloco 2b concluído (1.5 a 1.7 em `[x]`); **plano acelerado em 5 entregas proposto** (seção 16.0, D30, P24); admin sem etapa mock; duplicar/lote para a E5; sem `dnd-kit` | Usuário quer terminar mais rápido, com no máximo ~5 entregas |
 | v14 | 19/11/2026 | Bloco 2a concluído; bloco 2b entregue (1.5 a 1.7 em `[~]`); 1.3 e 1.4 `[x]`; estimativa de término; P23 resolvido | Usuário confirmou o 2a e pediu para seguir |
 | v13 | 19/11/2026 | Etapa 1 concluída; Etapa 2 em blocos 2a a 2e (D29); bloco 2a entregue (1.2 a 1.4 em `[~]`); P23 | Usuário deixou a ordem a critério do plano; telas portadas do protótipo, não redesenhadas |

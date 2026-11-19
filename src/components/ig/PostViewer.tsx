@@ -17,14 +17,16 @@ interface Props {
   client: ClientProfile;
   onNavigate: (index: number) => void;
   onClose: () => void;
-  onSubmitReview: (post: Post, decision: ReviewDecision, comment: string, name: string) => Promise<ReviewResult>;
+  onSubmitReview?: (post: Post, decision: ReviewDecision, comment: string, name: string) => Promise<ReviewResult>;
+  adminPreview?: boolean;
+  onEdit?: (post: Post) => void;
 }
 
 const navBtn =
   'fixed top-1/2 z-[60] hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-xl text-black md:flex';
 
 // Visualizador de publicação (seção 11.5): modal em 2 colunas no desktop, tela cheia no celular.
-export function PostViewer({ posts, index, client, onNavigate, onClose, onSubmitReview }: Props) {
+export function PostViewer({ posts, index, client, onNavigate, onClose, onSubmitReview, adminPreview = false, onEdit }: Props) {
   const post = posts[index];
   const dialog = useRef<HTMLDivElement>(null);
   const mobile = useIsMobile();
@@ -152,14 +154,14 @@ export function PostViewer({ posts, index, client, onNavigate, onClose, onSubmit
               <div className="truncate font-semibold">{client.username}</div>
               {post.location && <div className="truncate text-xs text-muted">{post.location}</div>}
             </div>
-            <button
+            {!adminPreview && <button
               type="button"
               onClick={() => void copyLink()}
               className="flex-none text-[13px] font-semibold text-accent"
               title="Copiar o link desta publicação"
             >
               Copiar link
-            </button>
+            </button>}
           </div>
 
           <div className="flex-1 py-3">
@@ -172,11 +174,28 @@ export function PostViewer({ posts, index, client, onNavigate, onClose, onSubmit
             {post.revision > 1 ? ` · Revisão ${post.revision}` : ''}
           </p>
 
-          <ApprovalPanel
-            key={post.id}
-            post={post}
-            onSubmit={(d, c, n) => onSubmitReview(post, d, c, n)}
-          />
+          {adminPreview ? (
+            <div className="border-t border-line pt-3">
+              <p className="text-sm font-semibold">Histórico de avaliações</p>
+              {post.reviews.length ? (
+                <ul className="mt-2 space-y-2 text-xs text-muted">
+                  {post.reviews.map((review, i) => (
+                    <li key={`${review.created_at}-${i}`}>
+                      {review.decision === 'approved' ? '✓ Aprovado' : '✎ Ajustes'} · {formatDateLong(review.created_at.slice(0, 10))} · Revisão {review.revision}
+                      {review.reviewer_name ? ` · ${review.reviewer_name}` : ''}{review.comment ? ` — ${review.comment}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="mt-1 text-xs text-muted">Ainda não há avaliações.</p>}
+              {onEdit && <button type="button" onClick={() => onEdit(post)} className="mt-3 rounded-lg border border-line px-3 py-2 text-sm font-semibold">Editar publicação</button>}
+            </div>
+          ) : onSubmitReview ? (
+            <ApprovalPanel
+              key={post.id}
+              post={post}
+              onSubmit={(d, c, n) => onSubmitReview(post, d, c, n)}
+            />
+          ) : null}
         </aside>
       </div>
     </div>

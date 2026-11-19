@@ -4,6 +4,8 @@ import { Diagnostico } from '@/pages/Diagnostico';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 import { AdminLogin } from '@/pages/admin/AdminLogin';
 import { ClientFormPage } from '@/pages/admin/ClientFormPage';
+import { ClientWorkspacePage } from '@/pages/admin/ClientWorkspacePage';
+import { PostEditorPage } from '@/pages/admin/PostEditorPage';
 import { ClientEntry } from '@/pages/client/ClientEntry';
 import { Unavailable } from '@/pages/client/Unavailable';
 
@@ -22,6 +24,9 @@ export function App() {
         <Route element={<AdminGuard />}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/clients/new" element={<ClientFormPage />} />
+          <Route path="/admin/clients/:clientId" element={<ClientWorkspacePage />} />
+          <Route path="/admin/clients/:clientId/posts/new" element={<PostEditorPage />} />
+          <Route path="/admin/clients/:clientId/posts/:postId" element={<PostEditorPage />} />
           <Route path="/admin/clients/:clientId/edit" element={<EditClientRoute />} />
         </Route>
         {/* Uma rota só (com `*`) para o perfil e `p/:postId`: abrir um post não recarrega o perfil. */}

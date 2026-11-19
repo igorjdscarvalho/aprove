@@ -205,6 +205,7 @@ export function AdminDashboard() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <Link to={`/admin/clients/${client.id}`} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg">Abrir</Link>
                   <Link to={`/admin/clients/${client.id}/edit`} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg">Editar</Link>
                   <button type="button" disabled={gateBusyId === client.id} onClick={() => void testLink(client)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg disabled:opacity-50">{gateBusyId === client.id ? 'Verificando…' : 'Testar link'}</button>
                   <button type="button" onClick={() => void copyLink(client)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg">Copiar link</button>

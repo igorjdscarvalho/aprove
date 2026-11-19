@@ -14,13 +14,15 @@ interface Props {
   startIndex: number;
   client: ClientProfile;
   onClose: () => void;
-  onSubmitReview: (post: Post, decision: ReviewDecision, comment: string, name: string) => Promise<ReviewResult>;
+  onSubmitReview?: (post: Post, decision: ReviewDecision, comment: string, name: string) => Promise<ReviewResult>;
+  adminPreview?: boolean;
+  onEdit?: (post: Post) => void;
 }
 
 const HOLD_MS = 250; // toque curto navega; segurar pausa
 
 // Stories em tela cheia (seção 11.9): barras, toque 30%/70%, segurar = pausa, vídeo ou imagem.
-export function StoryViewer({ slug, stories, startIndex, client, onClose, onSubmitReview }: Props) {
+export function StoryViewer({ slug, stories, startIndex, client, onClose, onSubmitReview, adminPreview = false, onEdit }: Props) {
   const [i, setI] = useState(() => Math.max(0, Math.min(stories.length - 1, startIndex)));
   const [hold, setHold] = useState(false);
   const [manualPause, setManualPause] = useState(false);
@@ -57,11 +59,11 @@ export function StoryViewer({ slug, stories, startIndex, client, onClose, onSubm
   // Cada story exibido conta como visto; o estado de pausa volta ao normal.
   const storyId = story?.id;
   useEffect(() => {
-    if (!storyId) return;
+    if (!storyId || adminPreview) return;
     markSeen(slug, storyId);
     setHold(false);
     setManualPause(false);
-  }, [slug, storyId]);
+  }, [slug, storyId, adminPreview]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -180,15 +182,24 @@ export function StoryViewer({ slug, stories, startIndex, client, onClose, onSubm
           <ChevronRightIcon />
         </button>
 
-        <div className="story-approval-panel absolute inset-x-0 bottom-0 z-[5] rounded-t-[14px] px-3.5 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
-          <ApprovalPanel
-            key={story.id}
-            post={story}
-            storyOverlay
-            onSubmit={(d, c, n) => onSubmitReview(story, d, c, n)}
-            onFormOpenChange={setFormOpen}
-          />
-        </div>
+        {adminPreview ? (
+          <div className="absolute inset-x-0 bottom-0 z-[5] flex items-center justify-between gap-3 bg-black/65 px-4 py-3 text-sm text-white backdrop-blur">
+            <span>{story.reviews.length ? `${story.reviews.length} avaliação(ões)` : 'Sem avaliações'}</span>
+            <button type="button" onClick={() => onEdit?.(story)} className="rounded-lg bg-white px-3 py-2 font-semibold text-black">Editar story</button>
+          </div>
+        ) : (
+          <div className="story-approval-panel absolute inset-x-0 bottom-0 z-[5] rounded-t-[14px] px-3.5 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3">
+            {onSubmitReview && (
+              <ApprovalPanel
+                key={story.id}
+                post={story}
+                storyOverlay
+                onSubmit={(d, c, n) => onSubmitReview(story, d, c, n)}
+                onFormOpenChange={setFormOpen}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

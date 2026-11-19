@@ -22,7 +22,11 @@ export const monthStories = (posts: Post[], f: MonthFilterState): Post[] =>
 
 /** Miniatura da grade: Reels usa a capa; imagem e carrossel usam a 1ª mídia. */
 export const thumbPath = (p: Post): string =>
-  p.type === 'reel' ? (p.cover_path ?? p.media[0]?.poster_path ?? '') : (p.media[0]?.path ?? '');
+  p.type === 'reel'
+    ? (p.cover_path ?? p.media[0]?.poster_path ?? '')
+    : p.type === 'carousel' && p.media[0]?.kind === 'video'
+      ? (p.media[0]?.poster_path ?? '')
+      : (p.media[0]?.path ?? '');
 
 /** Proporção (largura/altura) usada para desenhar a mídia do post. */
 export const postRatio = (p: Post): number =>
