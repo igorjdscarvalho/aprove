@@ -94,11 +94,11 @@ export function ReviewInbox({ posts, onOpenPost, onMarkRead }: Props) {
             return (
               <li key={review.id} className={`flex flex-col gap-3 rounded-xl border bg-surface p-3 sm:flex-row sm:items-start ${unread ? 'border-accent/50' : 'border-line'}`}>
                 <div className="h-24 w-20 shrink-0 overflow-hidden rounded bg-line">
-                  {thumbnail && <img src={mediaSrc(thumbnail)} alt="" className="h-full w-full object-cover" />}
+                  {thumbnail && <img src={mediaSrc(thumbnail)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold text-white ${review.decision === 'approved' ? 'bg-ok' : 'bg-warn'}`}>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold text-white ${review.decision === 'approved' ? 'bg-[#267a45]' : 'bg-[#a85f00]'}`}>
                       {DECISION_LABEL[review.decision]}
                     </span>
                     {unread && <span className="rounded-full bg-accent/10 px-2 py-1 text-xs font-semibold text-accent">Não lida</span>}

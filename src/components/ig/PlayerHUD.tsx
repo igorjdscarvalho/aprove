@@ -64,7 +64,7 @@ export function PlayerHUD({ state, visible, onToggle, onSeek, onSeekStart, onSee
         aria-valuemax={Math.round(state.duration)}
         aria-valuenow={Math.round(state.current)}
         aria-valuetext={`${formatClock(state.current)} de ${formatClock(state.duration)}`}
-        className="flex h-[18px] cursor-pointer touch-none items-center"
+        className="flex min-h-11 cursor-pointer touch-none items-center"
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -79,13 +79,13 @@ export function PlayerHUD({ state, visible, onToggle, onSeek, onSeekStart, onSee
       </div>
 
       <div className="flex items-center gap-2 text-xs font-medium">
-        <button type="button" onClick={onToggle} aria-label={state.paused ? 'Reproduzir' : 'Pausar'} className="flex p-1">
+        <button type="button" onClick={onToggle} aria-label={state.paused ? 'Reproduzir' : 'Pausar'} className="flex min-h-11 min-w-11 items-center justify-center p-1">
           {state.paused ? <PlayIcon /> : <PauseIcon />}
         </button>
         <span className="mr-auto tabular-nums">
           {formatClock(state.current)} / {formatClock(state.duration)}
         </span>
-        <button type="button" onClick={onToggleMute} aria-label={silent ? 'Ativar som' : 'Silenciar'} className="flex p-1">
+        <button type="button" onClick={onToggleMute} aria-label={silent ? 'Ativar som' : 'Silenciar'} className="flex min-h-11 min-w-11 items-center justify-center p-1">
           {silent ? <MuteIcon /> : <VolumeIcon />}
         </button>
         <input

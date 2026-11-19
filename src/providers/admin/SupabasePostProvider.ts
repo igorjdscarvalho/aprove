@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { removeMediaPaths } from '@/lib/storage';
+import { copyMediaPath, removeMediaPaths } from '@/lib/storage';
 import type { ApprovalStatus, AspectRatio, Media, Post, PostType, Review } from '@/types/domain';
 
 export interface AdminMedia extends Media {
@@ -145,6 +145,68 @@ export async function markReviewRead(reviewId: string): Promise<void> {
   if (error) fail(error);
 }
 
+export async function duplicateClientPost(clientId: string, postId: string): Promise<{ warning?: string }> {
+  const source = await getClientPost(clientId, postId);
+  const duplicateId = crypto.randomUUID();
+  const copiedPaths: string[] = [];
+  const copiedBySource = new Map<string, string>();
+
+  async function copyPath(sourcePath: string | null): Promise<string | null> {
+    if (!sourcePath) return null;
+    const existing = copiedBySource.get(sourcePath);
+    if (existing) return existing;
+    const extension = /\.[^./]+$/.exec(sourcePath)?.[0] ?? '';
+    const destination = `clients/${clientId}/posts/${duplicateId}/copy-${crypto.randomUUID()}${extension}`;
+    await copyMediaPath(sourcePath, destination);
+    copiedBySource.set(sourcePath, destination);
+    copiedPaths.push(destination);
+    return destination;
+  }
+
+  try {
+    const media: AdminMediaInput[] = [];
+    for (const item of source.media) {
+      const path = await copyPath(item.path);
+      if (!path) throw new Error('Uma mídia da publicação não tem caminho no Storage.');
+      media.push({
+        ...item,
+        id: crypto.randomUUID(),
+        position: media.length,
+        path,
+        poster_path: await copyPath(item.poster_path),
+      });
+    }
+
+    const input: AdminPostInput = {
+      id: duplicateId,
+      client_id: clientId,
+      type: source.type,
+      caption: source.caption,
+      location: source.location,
+      audio_name: source.audio_name,
+      scheduled_date: source.scheduled_date,
+      scheduled_time: source.scheduled_time,
+      is_visible: false,
+      approval_status: 'pending',
+      revision: 1,
+      aspect_ratio: source.aspect_ratio,
+      cover_path: await copyPath(source.cover_path),
+      grid_crop_x: source.grid_crop_x,
+      grid_crop_y: source.grid_crop_y,
+      story_seconds: source.story_seconds,
+    };
+    return await saveClientPost(input, media, false);
+  } catch (cause) {
+    const postDelete = await supabase.from('posts').delete().eq('id', duplicateId);
+    const failedCleanup = await removeMediaPaths(copiedPaths);
+    const reason = cause instanceof Error ? cause.message : 'Falha ao duplicar a publicação.';
+    const cleanupWarning = postDelete.error || failedCleanup.length
+      ? ' A limpeza da cópia incompleta no banco/Storage também falhou; revise os arquivos temporários.'
+      : '';
+    throw new Error(`${reason}${cleanupWarning}`);
+  }
+}
+
 export async function getClientPost(clientId: string, postId: string): Promise<AdminPost> {
   const posts = await listClientPosts(clientId);
   const post = posts.find((item) => item.id === postId);
@@ -215,6 +277,16 @@ export async function saveClientPost(input: AdminPostInput, media: AdminMediaInp
 
 export async function setPostVisibility(postId: string, isVisible: boolean): Promise<void> {
   const { error } = await supabase.from('posts').update({ is_visible: isVisible }).eq('id', postId);
+  if (error) fail(error);
+}
+
+export async function setClientPostsVisibility(clientId: string, postIds: string[], isVisible: boolean): Promise<void> {
+  if (!postIds.length) return;
+  const { error } = await supabase
+    .from('posts')
+    .update({ is_visible: isVisible })
+    .eq('client_id', clientId)
+    .in('id', postIds);
   if (error) fail(error);
 }
 

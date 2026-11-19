@@ -195,14 +195,14 @@ export function AdminDashboard() {
             {visible.map((client) => (
               <li key={client.id} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:items-center">
                 {client.avatar_path ? (
-                  <img src={mediaUrl(client.avatar_path)} alt="" className="h-14 w-14 shrink-0 rounded-full border border-line object-cover" />
+                  <img src={mediaUrl(client.avatar_path)} alt="" loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-full border border-line object-cover" />
                 ) : (
                   <span aria-hidden="true" className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-line text-lg font-bold text-muted">{client.name.slice(0, 1).toUpperCase()}</span>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="truncate font-bold">{client.name}</h3>
-                    <span className={`rounded-full border border-line bg-bg px-2.5 py-1 text-xs font-semibold ${client.status === 'published' ? 'text-ok' : client.status === 'archived' ? 'text-muted' : 'text-warn'}`}>
+                    <span className={`rounded-full border border-line bg-bg px-2.5 py-1 text-xs font-semibold ${client.status === 'published' ? 'text-[#1f6b3e] dark:text-[#87e7aa]' : client.status === 'archived' ? 'text-muted' : 'text-[#8b4b00] dark:text-[#ffc46b]'}`}>
                       {statusLabel(client.status)}
                     </span>
                   </div>

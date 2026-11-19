@@ -1,5 +1,5 @@
 import { mediaSrc } from '@/lib/mediaSrc';
-import { thumbPath } from '@/lib/posts';
+import { thumbPath, TYPE_LABEL } from '@/lib/posts';
 import type { ApprovalStatus, Post } from '@/types/domain';
 import { CarouselIcon, ReelIcon } from './icons';
 
@@ -16,6 +16,8 @@ const DOT_LABEL: Record<ApprovalStatus, string> = {
 
 // Miniatura 3:4 com o recorte (object-position) definido pelo admin e a bolinha de status (D14).
 export function GridTile({ post, onOpen }: { post: Post; onOpen?: () => void }) {
+  const description = post.caption.trim().slice(0, 90);
+  const accessibleName = `Abrir ${TYPE_LABEL[post.type]}${description ? `: ${description}` : ''}. Status: ${DOT_LABEL[post.approval_status]}.`;
   const inner = (
     <>
       <img
@@ -41,7 +43,7 @@ export function GridTile({ post, onOpen }: { post: Post; onOpen?: () => void }) 
   const cls = 'relative block aspect-[3/4] w-full overflow-hidden bg-surface';
 
   return onOpen ? (
-    <button type="button" onClick={onOpen} aria-label="Abrir publicação" className={cls}>
+    <button type="button" onClick={onOpen} aria-label={accessibleName} className={cls}>
       {inner}
     </button>
   ) : (

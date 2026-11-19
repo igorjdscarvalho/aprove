@@ -2,7 +2,7 @@
 
 **Projeto:** Plataforma de aprovação de conteúdo para Instagram (simulador de perfil + fluxo de aprovação por cliente)
 **Stack:** GitHub Pages (front estático) + Supabase (Auth, Postgres, Storage, Edge Functions opcionais)
-**Versão do documento:** v28 — **Última atualização:** 19/11/2026 (usuário aceitou E4 e autorizou o deploy; status do Pages será registrado após o push; E5 autorizada como última entrega)
+**Versão do documento:** v32 — **Última atualização:** 19/11/2026 (usuário confirmou E5 concluída e autorizou deploy final; build passou; commit/push E5 pendentes)
 **Natureza:** documento **vivo** — é atualizado a cada tarefa concluída (o que deu certo, o que não deu, por quê)
 
 > Este arquivo é a **fonte da verdade** do projeto. Quem for continuar o desenvolvimento (você ou uma nova sessão com o Claude) deve ler primeiro as seções 0 e 1, atualizar o **Painel de progresso** ao terminar cada tarefa e só então seguir para a próxima fase.
@@ -132,12 +132,12 @@ Não usar o nome/logo do Instagram nem copiar ícones proprietários. Usar ícon
 | **6** | Posts e uploads reais (imagem, carrossel, Reels, stories) | `[x]` (E3 aceita pelo usuário; build e validações locais confirmados; deploy autorizado) |
 | **7** | Acesso real do cliente: gate, senha, sessão, feed do banco | `[x]` (E4 aceita pelo usuário; gate, bloqueio, rotas e CSP considerados validados) |
 | **8** | Aprovações reais + caixa de entrada em tempo real | `[x]` (E4 aceita pelo usuário; ciclo de aprovação, inbox/Realtime, marcar como lida, métricas e reenvio validados) |
-| **9** | Polimento, acessibilidade, performance, segurança, QA | `[~]` (E5 autorizada; iniciar acabamento e checklists finais) |
-| **10** | Go-live e rotina de manutenção | `[~]` (E5 autorizada; preparar backup/rotina e validar go-live) |
+| **9** | Polimento, acessibilidade, performance, segurança, QA | `[x]` (E5 aceita pelo usuário em 19/11/2026; ele confirmou que as validações deram certo) |
+| **10** | Go-live e rotina de manutenção | `[~]` (E5 aceita e deploy final autorizado; enviar commit/push e confirmar Pages antes de fechar) |
 
 Os checklists detalhados de cada fase ficam na seção 16 (marcar lá também).
 
-**Próximo passo imediato:** o usuário confirmou “tá tudo certinho” para a E4 e autorizou o deploy; fazer commit/push agora. Isso dispara o Pages. O status do workflow E3 anterior não pôde ser confirmado, sem evidência de falha. Depois iniciar a E5, última entrega do D30: polimento, acessibilidade, performance, segurança/QA, duplicação/lote, backup e rotina de go-live. O usuário fará o build e as validações manuais da E5 antes do deploy final. P26 continua como lembrete de fluxos residuais da E2.
+**Próximo passo imediato:** o usuário confirmou que a E5 foi validada, que o projeto está pronto e autorizou o deploy final. O código E5 ainda está somente no workspace: fazer stage/commit/push para `origin/main`, o que aciona o GitHub Pages; depois conferir o workflow e a URL publicada. `npm run build` passou nesta sessão (`tsc`, Vite 5.4.21, 139 módulos). O teste de preview local e a consulta de Actions do agente ficaram bloqueados pelas limitações documentadas em 22.4; o usuário confirma que sua validação final passou. Após o Pages atualizar, registrar a data de go-live e concluir a E5.
 
 ---
 
@@ -1433,9 +1433,10 @@ jobs:
 **Configuração do Pages:** Repo → Settings → Pages → *Source: GitHub Actions*. Cadastrar os dois *secrets* em Settings → Secrets and variables → Actions.
 
 ### 14.4 Backups e manutenção
-- Exportar dump SQL do banco **mensalmente** (painel Supabase ou `pg_dump`) e guardar fora do Supabase.
-- Os arquivos do Storage **não** estão no dump de SQL: manter também os originais do material no seu drive.
-- Rotina mensal: conferir espaço do Storage, limpar posts de clientes arquivados antigos, revisar sessões ativas.
+1. **Mensalmente**, exportar um dump SQL pelo painel Supabase se o plano oferecer download; caso contrário, usar `pg_dump` com a conexão do banco. Guardar o arquivo criptografado fora do Supabase e fora do repositório. Nunca compartilhar a senha/conexão no chat.
+2. O dump SQL **não** contém os objetos do Storage. Manter cópia dos arquivos originais em um drive separado e organizado por cliente; comparar periodicamente se os arquivos importantes ainda existem.
+3. **Mensalmente**, revisar uso/quota do banco, Storage e egress em `Settings → Usage` e `Plans & Billing`, sessões ativas e clientes arquivados. Apagar dados antigos só após confirmar retenção com o cliente e verificar que o backup existe.
+4. **Trimestralmente**, testar a restauração do dump em um projeto separado ou ambiente de recuperação, sem sobrescrever o projeto de produção.
 
 ---
 
@@ -1467,8 +1468,8 @@ jobs:
 | **E1 · Cliente completo no Vite** (antigos 2c + 2d + 2e) | `PostViewer` + `Caption`, `Carousel`, `ReelPlayer` + `PlayerHUD`, `StoryViewer` + `ApprovalPanel`, responsividade, temas e skeletons; painel de aprovação dos stories refinado em D31 | 1.8 a 1.13 (1.14 cancelado, D26) | Aceite da Fase 1: fluxo completo do cliente e avaliação visual do usuário | **Validada pelo usuário em 19/11/2026** |
 | **E2 · Admin real** (Fase 5) | Login real (`signInWithPassword`) + `AdminGuard` com `is_admin()`; dashboard (busca, abas por status, contadores via `admin_client_counters`); `ClientForm` com avatar real (recorte circular + Storage); senha real (`admin_set_client_password`), modal de senha ao publicar (D18), revogar sessões, destravar; arquivar/excluir com confirmação e remoção de arquivos; `noindex` + CSP. **Sem `AdminDataProvider` mock**: vai direto ao Supabase | 5.1 a 5.6 | Aceite da Fase 5: criar/editar/arquivar/excluir cliente persiste de verdade; `client_gate` reflete o status | **Implementada; usuário disse que os fluxos existentes estão funcionando; P26 ainda acompanha verificações administrativas residuais.** |
 | **E3 · Posts e uploads reais** (Fase 6) + workspace do cliente | `lib/media`, `lib/storage` (upload simples + TUS resumível com progresso); `MediaUploader`; editor dos 4 tipos com prévia de perfil, `CoverCropper` (recorte 3:4 e frame do vídeo); carrossel reordenável por pointer events; workspace Feed (**reusa os componentes do cliente em modo `adminPreview`, resolve P9**), Publicações e Configurações; filtros, ocultar/mostrar, excluir com arquivos e reenviar para aprovação (`revision`). Prévia do celular é integrada ao editor, sem componente separado. | 6.1 a 6.4, exclusão de 6.5; duplicação segue para E5; 6.6 | **Aceita pelo usuário em 19/11/2026**, após build corrigido e validação dos fluxos E3 | Entregue; aceite do usuário |
-| **E4 · Cliente real + aprovações + caixa de entrada** (Fases 7 e 8) | Provider Supabase do cliente (`client_gate`, `client_login`, `client_get_feed`, `client_logout`, token por slug) e `ApprovalPanel` real (`client_submit_review`; `unauthorized`, `rate_limited`, `comment_required`) — fluxo básico já validado; admin: selos/contadores reais, aba Aprovações por cliente, `ReviewInbox` com Realtime e "marcar como lida", Métricas por tipo/total (RF-A11, D21), reenvio mantendo histórico | 7.1 a 7.4, 8.1 a 8.3 | Aceites das Fases 7 e 8. **Marco: produto usável com cliente real** (ciclo completo admin → link → cliente aprova → admin vê) | **Aceita pelo usuário em 19/11/2026**; deploy autorizado, push em andamento |
-| **E5 · Acabamento e go-live** (Fases 9 e 10) | Acessibilidade, Lighthouse mobile ≥ 90, checklist de segurança 17.2 completo, QA 17.3, revisão de textos; duplicar com cópia de arquivos e ação em lote (6.5); pendências P11, P16, P17, P22; rotina de backup (14.4); primeiro ciclo com cliente real; registrar a data do go-live | 6.5 (duplicar/lote), 9.1 a 9.5, 10.1 a 10.4 | Aceite das Fases 9 e 10 | Baixo |
+| **E4 · Cliente real + aprovações + caixa de entrada** (Fases 7 e 8) | Provider Supabase do cliente (`client_gate`, `client_login`, `client_get_feed`, `client_logout`, token por slug) e `ApprovalPanel` real (`client_submit_review`; `unauthorized`, `rate_limited`, `comment_required`) — fluxo básico já validado; admin: selos/contadores reais, aba Aprovações por cliente, `ReviewInbox` com Realtime e "marcar como lida", Métricas por tipo/total (RF-A11, D21), reenvio mantendo histórico | 7.1 a 7.4, 8.1 a 8.3 | Aceites das Fases 7 e 8. **Marco: produto usável com cliente real** (ciclo completo admin → link → cliente aprova → admin vê) | **Aceita pelo usuário em 19/11/2026**; commit `65ed136` enviado para `origin/main`, deploy automático acionado; workflow sem confirmação |
+| **E5 · Acabamento e go-live** (Fases 9 e 10) | Acessibilidade, Lighthouse mobile ≥ 90, checklist de segurança 17.2, QA 17.3, revisão de textos; duplicar com cópia de arquivos e ação em lote (6.5); pendências P11, P17, P22; rotina de backup (14.4); primeiro ciclo com cliente real; registrar a data do go-live | 6.5 (duplicar/lote), 9.1 a 9.5, 10.1 a 10.4 | Usuário confirmou que a E5 foi validada e autorizou deploy final em 19/11/2026; commit/push e confirmação do Pages pendentes | Baixo |
 
 **Regras para não perder velocidade nem qualidade**
 1. Uma entrega = alterações na pasta compartilhada do projeto + **roteiro de teste numerado** (10 a 15 itens) + lista de arquivos novos/alterados. Não gerar zip quando o código já está na pasta do projeto; o usuário faz o commit **depois da validação** para não registrar algo que ainda precise de patch.
@@ -1499,6 +1500,27 @@ Use um cliente de teste publicado, com senha conhecida e posts visíveis dos qua
 12. Na aba Métricas, confira total e linhas Imagem, Carrossel, Reels e Story: avaliados, aprovados na primeira resposta, conteúdos com algum pedido de ajuste, quantidade de pedidos, média de ajustes por reprovado e reenvios. Oculte um rascunho e confirme que ele não entra nos cálculos; reexiba depois se necessário.
 13. Confira gate indisponível para cliente não publicado/arquivado e mídia carregando no Pages publicado; CSP e rotas devem manter as URLs de mídia e o WebSocket Supabase funcionando. O status do deploy E3 ainda não foi confirmado; relate se o workflow publicado estiver vermelho.
 14. Se um passo falhar, envie o número, mensagem/print e diga se ocorreu no build, admin local, link local ou site publicado. Não faça commit/push até fechar a rodada de validação/correção.
+
+#### Roteiro de validação da E5 no PC do usuário
+
+Use um cliente de teste e mantenha um post original que possa comparar com as cópias. A ação em lote altera a visibilidade para o cliente; confirme que está no perfil de teste antes de usá-la.
+
+1. No GitHub, abra **Actions → Deploy to GitHub Pages** e confira a execução do commit E4 `65ed136`. O push acionou o workflow, mas o status ainda não foi confirmado aqui. Se estiver vermelho, envie uma captura antes de tratar o site como atualizado.
+2. O `npm run build` já passou nesta sessão: `tsc --noEmit` e Vite 5.4.21 (139 módulos). Repita apenas se mudar arquivos depois dessa validação; se aparecer erro, pare e envie a saída completa, sem commit.
+3. Rode `npm run dev`, entre no admin e abra **Publicações** do cliente de teste. Duplique uma imagem e um carrossel; depois, se houver exemplos, duplique também um Reel e um story.
+4. Confirme que cada cópia aparece como rascunho oculto e pendente, mantendo legenda, data, ordem e demais detalhes do post original.
+5. Abra as cópias no editor/prévia e confirme que as mídias carregam. Oculte ou exclua somente uma cópia de teste e confira que o post original continua intacto e visível como antes.
+6. Em **Publicações**, selecione dois rascunhos. Desmarque um e confira que a contagem selecionada acompanha a seleção; teste **Limpar seleção**.
+7. Selecione novamente alguns rascunhos e clique em **Tornar visíveis**. Cancele a confirmação: nada deve mudar. Repita e confirme; só os selecionados devem passar a visíveis. Confira no link público do cliente de teste.
+8. Troque os filtros de tipo, avaliação e mês; a seleção antiga deve ser limpa e **Selecionar rascunhos filtrados** deve considerar apenas os rascunhos exibidos.
+9. Confira com teclado: navegue por Tab/Shift+Tab, veja o foco visível, acione os controles com Enter/Espaço e confirme que os botões de ícone têm nomes compreensíveis no leitor de tela.
+10. Em largura de 360–390 px e em desktop, confira as telas de perfil, publicação, carrossel, Reel, story, inbox e editor; não deve haver conteúdo essencial cortado nem rolagem horizontal indevida. Verifique tema claro/escuro e alvos de toque.
+11. No Chrome DevTools, rode Lighthouse em **modo mobile** contra `npm run preview` após o build. Registre Performance e Accessibility; a meta do plano é ≥ 90 em ambas. Se não atingir, envie os resultados para ajustar antes do deploy.
+12. No campo de legenda/comentário, use `<img src=x onerror=alert(1)>`: deve aparecer como texto e não executar. A busca por Secret key/JWT já foi feita nos arquivos rastreados e não encontrou valores; não cole credenciais no chat.
+13. Rode `npm audit` e envie o resumo por severidade e os pacotes apontados. Não rode `npm audit fix --force` nem cole tokens/credenciais do resultado.
+14. No painel Supabase, confira **Settings → Usage** para uso atual e **Plans & Billing** para as quotas totais; registre banco, Storage, egress e eventual MAU em 8.4 (P17).
+15. Faça uma cópia de segurança conforme 14.4 e confirme onde guardou o dump e os arquivos originais do Storage; não envie senhas, strings de conexão ou o conteúdo do dump.
+16. Teste o fluxo em Chrome desktop, Safari desktop/iOS e Chrome Android que estiverem disponíveis. Anote itens não testados. Depois do aceite e deploy E5, abra o site publicado, confirme login admin, link público e uma aprovação ponta a ponta; só então registrar a data do go-live. Se algo falhar, envie o número, mensagem e print.
 
 ### Fase 1 — Protótipo visual do cliente (dados fictícios)
 **Objetivo:** o usuário abre o protótipo e **vê e testa** tudo o que o cliente verá, sem nenhum backend.
@@ -1632,7 +1654,7 @@ Rode `npm run build`; depois `npm run dev` e abra `http://localhost:5173/aprove/
 - [x] 6.2 `lib/storage.ts` (upload simples + TUS com progresso, remoção, `copy`); protocolo TUS manual sobre o endpoint do Supabase, validado pelo usuário na E3.
 - [x] 6.3 `MediaUploader` real (fila, progresso, interromper/retomar, aviso ao sair com upload em andamento); validado pelo usuário na E3.
 - [x] 6.4 Provider de posts do Supabase (posts, mídias, capas, recorte da grade, revisões); validado pelo usuário na E3.
-- [~] 6.5 Excluir post/mídia apagando arquivos; implementado. Duplicar com cópia de arquivos foi mantido para E5 pelo D30.
+- [x] 6.5 Excluir post/mídia apagando arquivos; duplicar com cópia independente no Storage e tornar rascunhos visíveis em lote estão implementados. E5 aceita pelo usuário em 19/11/2026; deploy final pendente.
 - [x] 6.6 Teste com vídeo real próximo do limite de tamanho; usuário aceitou a E3 em 19/11/2026.
 
 **Aceite:** um post de cada tipo persistido; Reels com capa e recorte corretos após recarregar; excluir remove os arquivos; falha de rede no upload permite retomar.
@@ -1671,20 +1693,20 @@ Rode `npm run build`; depois `npm run dev` e abra `http://localhost:5173/aprove/
 
 ### Fase 9 — Polimento, acessibilidade, performance, segurança, QA
 **Tarefas**
-- [ ] 9.1 Auditoria de acessibilidade (teclado, leitor de tela, contraste).
-- [ ] 9.2 Performance: Lighthouse mobile ≥ 90 (Performance/Acessibilidade) na tela do perfil; imagens `lazy`; grid com ~200 posts fluido.
-- [ ] 9.3 Checklist completo de segurança (17.2).
-- [ ] 9.4 QA cross-browser/dispositivo (17.3).
-- [ ] 9.5 Revisão de textos, mensagens de erro e estados vazios.
+- [x] 9.1 Auditoria de acessibilidade. *(E5 aceita pelo usuário em 19/11/2026; validação não detalhada item a item no chat.)*
+- [x] 9.2 Performance/Lighthouse mobile e grid. *(E5 aceita pelo usuário em 19/11/2026; pontuações não informadas.)*
+- [x] 9.3 Checklist de segurança (17.2). *(E5 aceita pelo usuário em 19/11/2026; a busca rastreada de chave/JWT também não encontrou valores.)*
+- [x] 9.4 QA cross-browser/dispositivo (17.3). *(E5 aceita pelo usuário em 19/11/2026; matriz individual não informada.)*
+- [x] 9.5 Revisão de textos, mensagens de erro e estados vazios. *(E5 aceita pelo usuário em 19/11/2026.)*
 
 **Aceite:** 17.2 e 17.3 100% OK.
 
 ### Fase 10 — Go-live
 **Tarefas**
 - [ ] 10.1 (Opcional) Domínio próprio no Pages + HTTPS; ajustar `base` e CSP.
-- [ ] 10.2 Cadastrar cliente real e fazer um ciclo completo de aprovação.
-- [ ] 10.3 Documentar rotina de backup (14.4).
-- [ ] 10.4 Registrar a data do go-live no Diário e marcar o Painel.
+- [x] 10.2 Cadastrar cliente real e fazer um ciclo completo de aprovação. *(E5 aceita pelo usuário em 19/11/2026.)*
+- [x] 10.3 Documentar e configurar a rotina de backup (14.4). *(E5 aceita pelo usuário em 19/11/2026.)*
+- [~] 10.4 Registrar a data do go-live no Diário e marcar o Painel. *(Aplicação validada pelo usuário; concluir após o deploy final do Pages.)*
 
 ---
 
@@ -1710,7 +1732,7 @@ Rode `npm run build`; depois `npm run dev` e abra `http://localhost:5173/aprove/
 - [x] Usuário Supabase Auth que **não** está em `admins` não lê/escreve nada.
 - [x] Upload no bucket com anon → negado; listagem do bucket com anon → negada.
 - [ ] Legenda com `<img onerror=...>` é exibida como texto.
-- [ ] Repositório sem `service_role` (rodar busca por `service_role` e por `eyJ` suspeitos).
+- [x] Busca nos arquivos rastreados por valores de Secret key/JWT: nenhum padrão encontrado (a busca não imprime valores). A `.env.local` fica fora do repositório e deve continuar ignorada pelo Git.
 
 ### 17.3 QA manual (matriz)
 | Cenário | Desktop Chrome | Desktop Safari | iOS Safari | Android Chrome |
@@ -1799,7 +1821,7 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 > Atualizar **a cada tarefa** (regra 0.2). Não apagar registros; marcar como resolvidos.
 
 ### 22.1 Próximo passo
-**(19/11/2026)** E4 foi aceita pelo usuário após a entrega e o roteiro de validação; o usuário autorizou seu deploy e iniciar E5, a última entrega do D30. Fazer commit/push E4 agora e conferir o workflow do Pages. Depois, implementar E5: acabamento, acessibilidade, performance, segurança/QA, duplicação e ação em lote, backup e rotina de go-live. Nenhum build foi executado por mim; o usuário confirmou que a E4 está correta. O deploy E3 anterior foi acionado, mas o workflow ainda não foi confirmado. P29 será fechado pelo aceite; P26 continua como lembrete administrativo residual da E2.
+**(19/11/2026)** E4 foi aceita e enviada a `origin/main` no commit `65ed136`; o push acionou Pages, mas o status do workflow não foi confirmado. E5, última entrega do D30, está implementada no workspace e documentada para validação manual. Próximo passo: o usuário roda build e roteiro E5 no PC; corrigir eventuais falhas; depois do aceite, commit/push e confirmar o Pages. P29 fechado; P30 acompanha o workflow E4; P31 acompanha build/QA/aceite E5; P26 segue como lembrete de fluxos administrativos residuais da E2.
 
 **Estimativa de término (informada ao usuário em 19/11/2026):** falta cerca de 35% do trabalho, em 17 a 20 entregas (cada uma = 1 rodada de entrega + 15 a 30 min de teste do usuário): 2b a 2e (4), admin real (3), posts e uploads reais, Fase 6 (4), Fases 7 e 8 (3), Fases 9 e 10 (3). Em tempo do usuário, 15 a 25 horas (1 a 2 semanas dedicando tempo, 3 a 4 semanas com pouco tempo por dia). Produto usável com cliente real ao fim da Fase 8 (cerca de 14 entregas). Estimativa sujeita a mudar, em especial nas Fases 6 e 9.
 
@@ -1889,7 +1911,9 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 
 | 19/11/2026 | Build E3 e patch E3.1 | ⚠️ | Primeiro `npm run build` do usuário mostrou dois TS2345 em `PostEditorPage.tsx`: o valor inicial `IG.STORY_DEFAULT_SECONDS` fez `useState` inferir o tipo literal `5`, mas o banco e o slider usam números entre 1 e 15. Alterado para `useState<number>(...)` | O build ainda precisa ser repetido pelo usuário; nenhum erro de integração/runtime foi reportado ainda | `src/pages/admin/PostEditorPage.tsx`, este arquivo |
 | 19/11/2026 | Aceite da E3 e autorização de deploy/E4 | ✅ | Usuário informou que está tudo certo após a correção E3.1 e autorizou seguir com deploy e E4. O build corrigido e os fluxos E3 passam a ser aceitos; commit `f750615` enviado com sucesso para `origin/main`, acionando GitHub Pages | O workflow foi acionado, mas seu status não foi confirmado: `gh` não está instalado; GitHub web retornou cache miss e o Computer Use encerrou por não reconhecer a URL atual com confiança. Isso não confirma falha do deploy | commit `f750615`; próximo trabalho: confirmar Pages e iniciar E4 |
-| 19/11/2026 | Aceite da E4 e autorização de deploy/E5 | ✅ | Usuário informou que está tudo certinho após a validação da E4; considerados aceitos o build/fluxos manuais, as aprovações reais, inbox/Realtime, marcar como lida, métricas, reenvio, gate/bloqueio, rotas e CSP. Autorizou deploy e seguir para a última entrega E5 | O push ainda será realizado nesta tarefa; o workflow de Actions será anotado após tentativa, sem alegar sucesso antes da confirmação | `src/components/admin/ReviewInbox.tsx`, `src/components/admin/ClientMetrics.tsx`, `src/lib/adminMetrics.ts`, alterações E4 e este arquivo |
+| 19/11/2026 | Aceite e deploy E4; início da E5 | ✅ | Usuário confirmou que a E4 está certinha e autorizou o deploy e seguir para a última entrega. Commit `65ed136` (inbox/Realtime, marcar como lida, métricas, atalhos, provider admin e continuidade) enviado para `origin/main`; o push concluiu e acionou o Pages. E5 iniciada conforme D30 | Não foi possível confirmar o status final do workflow; `gh` não está instalado e a página Actions retornou cache miss. Escrita inicial no índice Git foi bloqueada (`.git/index.lock`) pelas permissões do workspace e concluída usando elevação autorizada | `65ed136`; E4 files; este arquivo |
+| 19/11/2026 | E5 · acabamento, duplicar e ação em lote | ⚠️ | Implementados duplicação de posts com cópia independente de capa/mídias/poster e novos IDs; cópia fica oculta e pendente. Implementada seleção de rascunhos e atualização em lote com confirmação. Ajustados nomes acessíveis, cores de contraste, alvos de toque e imagens lazy. Guia Supabase atualizado para `007`, Publishable key e Windows; backup mensal/trimestral documentado; roteiro E5 com 16 verificações entregue. `git diff --check` passou; busca rastreada não encontrou Secret key/JWT e o código-fonte não usa `dangerouslySetInnerHTML`, `innerHTML` ou `eval` | **Não** foram executados build, Lighthouse, npm audit, teste de navegador, chamadas ao Supabase nem validação cross-browser, conforme preferência do usuário; build/aceite E5 pendentes. P16 resolvido; P31 aberto | `SupabasePostProvider.ts`, `ClientWorkspacePage.tsx`, componentes `ig/` e `ReviewInbox.tsx`, `AdminDashboard.tsx`, `PASSO_A_PASSO_FASES_3_E_4.md`, este arquivo |
+| 19/11/2026 | Build e tentativa de validação visual E5/E4 | ⚠️ | `npm run build` passou (`tsc --noEmit`, Vite 5.4.21, 139 módulos). O site publicado abriu no Chrome e renderizou o painel admin com uma sessão que já estava ativa; nenhuma ação de escrita foi feita. `npm run preview -- --host 127.0.0.1` iniciou | Chrome local retornou `ERR_CONNECTION_TIMED_OUT`; `Invoke-WebRequest` foi bloqueado/expirou no loopback. A automação encerrou a tentativa de abrir GitHub Actions por não conseguir confirmar a URL atual. Não foi possível exercitar duplicação/lote E5 no browser, confirmar workflow E4, rodar Lighthouse, audit ou QA cross-browser. P30/P31 seguem pendentes, com build resolvido | `package.json`; este arquivo |
 
 ### 22.3 O que deu certo (padrões a repetir)
 | Data | Contexto | O que funcionou | Por que funcionou |
@@ -1897,6 +1921,8 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | 18/11/2026 | Protótipo | Dados fictícios gerados em código (SVG com gradiente) e estado em memória | Dispensa arquivos externos e permite testar todos os tipos de post sem backend |
 | 18/11/2026 | Protótipo | Player com HUD escrito contra uma interface mínima (`currentTime`, `duration`, `paused`, `volume`, `muted`, `play`, `pause`) | O mesmo HUD controla o vídeo simulado e um `<video>` real escolhido pelo usuário |
 | 18/11/2026 | Admin | Estado em `localStorage` + imagens redimensionadas no navegador | Mesmo dado para admin e cliente em abas diferentes, sem backend, e cabe na cota |
+| 19/11/2026 | Duplicação E5 | Criar registro novo oculto/pendente e IDs de mídia próprios; copiar capa, arquivo e poster para caminhos exclusivos; remover cópias parciais se o salvamento falhar | Mantém o original independente e evita expor uma publicação duplicada antes da revisão |
+| 19/11/2026 | Ação em lote E5 | Atualizar visibilidade em uma única operação filtrada por `client_id` e IDs selecionados; pedir confirmação antes de publicar rascunhos | Limita a alteração ao cliente aberto e dá ao usuário chance de cancelar |
 | 18/11/2026 | Qualidade | Rodar o HTML num navegador automatizado antes de entregar | Pegou o bug E2, que a leitura do código não mostrava |
 | 18/11/2026 | Pointer events | Arrastar do carrossel e do recorte do avatar com `setPointerCapture` + `touch-action:none` | Mesmo código para mouse e toque, sem biblioteca |
 | 18/11/2026 | Backup | Formato com marcador `app` e versão `v`, validado na importação, com confirmação antes de substituir | Evita importar arquivo errado e perder dados por engano |
@@ -1943,6 +1969,10 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | 19/11/2026 | Primeiro build E3 | `npm run build` | TS2345: `number` não podia ser atribuído a `SetStateAction<5>` nas linhas do carregamento e do slider de duração do story | TypeScript inferiu o estado a partir da constante inicial literal `5` | Tipar explicitamente o estado como `useState<number>(IG.STORY_DEFAULT_SECONDS)`; usuário repetiu o build e confirmou que está tudo certo | resolvido pela E3.1 (19/11/2026) |
 | 19/11/2026 | Confirmar workflow do deploy E3 | Abrir o GitHub Actions após o push | `gh` CLI não está instalado; a página GitHub Actions não carregou via ferramenta web; Computer Use foi interrompido por não determinar a URL ativa com confiança | Limitação de acesso/verificação deste turno; o push para `origin/main` foi bem-sucedido e o deploy foi acionado | Tentar confirmar Actions quando a interface estiver acessível; não tratar o workflow como falho sem resultado | pendente |
 
+| 19/11/2026 | Git E4 no workspace | `git add` no sandbox padrão, depois commit/push | `fatal: Unable to create .../.git/index.lock: Permission denied` | `.git` tem permissão de leitura no sandbox gerenciado, embora a pasta do projeto permita escrita; Git precisa gravar o índice e os objetos do commit | Usar `git` com elevação autorizada pelo usuário para staging/commit/push; commit `65ed136` e push terminaram sem erro | resolvido (19/11/2026) |
+| 19/11/2026 | Conferência do workflow E4 | `gh run list` e abertura da página Actions | `gh` não está instalado; a busca web recebeu `Cache miss` ao carregar GitHub Actions | Não há leitor de Actions/API conectado neste ambiente e o cache da web não forneceu a página | Manter P30 aberto; usuário pode conferir Actions no GitHub e informar o status, sem presumir deploy verde | pendente |
+| 19/11/2026 | Atualização do guia Supabase | Primeira tentativa de substituir o trecho inteiro do comando API | O contexto do comando tinha diferenças de barras/linhas e o patch foi rejeitado sem alterar o arquivo | A forma antiga era um bloco bash e não batia com o conteúdo real | Aplicar alterações em trechos menores; atualização do guia concluída | resolvido (19/11/2026) |
+
 ### 22.5 Problemas conhecidos em aberto
 | # | Descrição | Impacto | Fase afetada | Status (aberto/em validação/resolvido) | Observações |
 |---|---|---|---|---|---|
@@ -1956,25 +1986,27 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | P8 | Avatar sem recorte circular (só reduz a 300px) | Baixo | 2 | resolvido (18/11/2026) | Modal com arrastar e zoom, saída 300x300 |
 | P9 | Aba Feed do workspace era grade diferente do feed do cliente | Médio | 2 | resolvido (19/11/2026) | E3 usa os componentes do cliente em `adminPreview` no workspace Vite |
 | P10 | Carrossel reordena por botões ‹ ›, sem arrastar (dnd-kit) | Baixo | 2 | resolvido (19/11/2026) | HTML já usava pointer events; E3 também implementa arrastar com pointer events no editor Vite, sem adicionar `dnd-kit` |
-| P11 | Admin e cliente ainda não testados em celular real e no desktop pelo usuário | Médio | 1-2 | aberto | Pedir validação |
+| P11 | Admin e cliente ainda não testados em celular real e no desktop pelo usuário | Médio | 1-2 | resolvido (19/11/2026) | Usuário confirmou a validação final da E5 e disse que está tudo certo |
 | P12 | O backup exportado contém as senhas dos clientes em texto (só no protótipo) | Baixo | 2 | aberto | Guardar o arquivo com cuidado; no Supabase só existe hash (D4) |
 | P13 | Definições das métricas (D21) escolhidas sem confirmação do usuário | Baixo | 2 | aberto | Pedir validação |
 | P14 | SQL validado só em Postgres local com stubs, não no Supabase real | Médio | 4 | resolvido (18/11/2026) | `security_checks.sql` rodado no Supabase real: 39 PASS após a `007`. A diferença esperada apareceu (GRANT ao `authenticated`) |
 | P15 | Cadastro público (*Allow new users to sign up*) não confirmado como desligado | Alto (segurança) | 3 | resolvido (18/11/2026) | Desligado pelo usuário (D27, 3.7) |
-| P16 | `docs/PASSO_A_PASSO_FASES_3_E_4.md` ainda sem a `007`, com comandos para bash (o usuário usa Windows) e com o painel de limites incompleto | Baixo | 3-4 | aberto | Atualizar: tabela de migrações (007), seção 4.4 para CMD, 3.4 com "Settings → Usage" |
-| P17 | Quotas totais do plano Free (banco, Storage, egress) não anotadas | Médio | 3, 6 | aberto | Conferir em Supabase Plans/Billing e registrar em 8.4 |
+| P16 | `docs/PASSO_A_PASSO_FASES_3_E_4.md` estava sem a `007`, com comandos bash e painel de quotas incompleto | Baixo | 3-4 | resolvido (19/11/2026) | Tabela inclui 007; guia usa Project Settings → API Keys/Publishable key e comando `curl.exe` de uma linha; separa consumo `Usage` das quotas totais em Plans & Billing |
+| P17 | Quotas totais do plano Free (banco, Storage, egress) não anotadas | Médio | 3, 6 | resolvido por aceite E5 (19/11/2026) | Usuário confirmou encerramento da E5; números individuais não foram enviados nesta conversa |
 | P18 | Node LTS, Git, repositório `aprove` e Pages (*GitHub Actions*) | Médio | 3, 5 | resolvido (19/11/2026) | Node/Git/repo conferidos; Pages em GitHub Actions ativado; workflow de deploy ficou verde e o site abriu com as quatro verificações OK, segundo o usuário |
 | P19 | Confirmar que o workflow agendado `keepalive.yml` executa no GitHub Actions | Médio | 5 | aberto | O arquivo existe, chama `ping()` a cada 3 dias e tem `workflow_dispatch`; ainda falta observar uma execução. Repositório público pode desativar workflows após 60 dias sem atividade |
 | P20 | Código da Etapa 1: `npm install`, `npm run dev` (4 OK) e `npm run build` (sem erros, 19/11/2026) funcionaram no PC do usuário | Baixo | 5 | resolvido (19/11/2026) | Parte B concluída: secrets, Pages, push e deploy publicados; workflow verde informado pelo usuário |
 | P21 | Versões das dependências em faixas `^` sem consulta ao npm | Baixo | 5 | parcial | Usuário no Windows: Node v26.13.0, npm 11.20.0, Git 2.56.1 (18/11/2026), compatíveis com Vite 5 e Tailwind 3; o workflow usa Node 22 (sem impacto). O `package-lock.json` gerado no primeiro `npm install` fixa as versões e deve ir ao Git |
-| P22 | `npm install` mostrou: **4 vulnerabilities (3 moderate, 1 high)** e o aviso do npm 11 *install-scripts* (esbuild 0.21.5 com postinstall não coberto por `allowScripts`). Nada quebrou. **Não** usar `npm audit fix --force` (sobe versões maiores e quebra o projeto) | Baixo | 5 | aberto | Provavelmente só ferramentas de desenvolvimento (Vite 5/esbuild). Rodar `npm audit` e avaliar; se o esbuild acusar erro, usar `npm install-scripts approve esbuild`. Reavaliar ao atualizar para Vite mais novo |
+| P22 | `npm install` mostrou: **4 vulnerabilities (3 moderate, 1 high)** e o aviso do npm 11 *install-scripts* (esbuild 0.21.5 com postinstall não coberto por `allowScripts`). Nada quebrou. **Não** usar `npm audit fix --force` (sobe versões maiores e quebra o projeto) | Baixo | 5 | resolvido por aceite E5 (19/11/2026) | Usuário confirmou encerramento da E5; resumo individual do `npm audit` não foi enviado; manter as versões travadas e não usar `--force` |
 | P23 | Bloco 2a sem teste no PC: os `.tsx` não foram checados com os tipos reais do React/Router | Baixo | 2 | resolvido (19/11/2026) | `npm run build` passou e o 2a funcionou no navegador. Vale para cada bloco: o build no PC é o teste de tipos real |
-| P24 | Plano acelerado (D30): entregas maiores aumentam a chance de erro de tipo ou integração só aparecer durante a validação manual | Médio | 2-8 | aberto (risco) | E3 foi aceita; E4 está entregue para build e validação manual do usuário. Conferir integração real/Realtime no Windows antes do push e corrigir por patch, se necessário |
+| P24 | Plano acelerado (D30): entregas maiores aumentam a chance de erro de tipo ou integração só aparecer durante a validação manual | Médio | 2-10 | aberto (risco) | E4 foi aceita; executar o build e roteiro E5 no PC antes do deploy final |
 | P25 | Aceite manual da E1 aguardava teste no computador do usuário | Médio | 1 | resolvido (19/11/2026) | Usuário confirmou que a E1 estava correta; refinamentos visuais desktop de stories foram aplicados em D31 |
 | P26 | Validação item a item de alguns fluxos administrativos da E2 não foi registrada | Médio | 5 | aberto | Usuário informou que está tudo funcionando; manter como lembrete porque filtros/contadores, avatar, revogar/destravar e exclusão não foram relatados individualmente. Não bloqueia E3 |
 | P27 | Link público de cliente real mostrava indisponível até a integração do provider Supabase | Alto | 7-8 | resolvido (19/11/2026) | Causa registrada na 22.4. Patch v20 usa as RPCs existentes; o usuário validou gate, senha, sessão após atualizar, logout e estado arquivado. Feed sem posts é esperado até a E3 |
 | P28 | Build e validação real da E3 | Alto | 6 | resolvido (19/11/2026) | Primeiro build apontou TS2345 em `storySeconds`; E3.1 tipou o estado como `number`. O usuário informou que o build seguinte e a validação da entrega passaram |
 | P29 | Build e validação manual da E4 (Realtime, aprovação real, marcar como lida, métricas, CSP/rotas e bloqueio por tentativas) | Alto | 7-8 | resolvido (19/11/2026) | Usuário confirmou “tá tudo certinho” e autorizou o deploy E4 e início da E5 |
+| P30 | Status do workflow GitHub Pages após deploy E4 (`65ed136`) | Médio | 5 | em validação | Página publicada abriu no Chrome e renderizou o painel admin com sessão preexistente, mas o controle parou ao navegar para Actions porque não conseguiu determinar a URL atual com confiança; `gh` também não está instalado. Workflow continua sem confirmação |
+| P31 | Build, testes manuais, Lighthouse, segurança e aceite E5 | Alto | 9-10 | resolvido por confirmação do usuário (19/11/2026); deploy final pendente | O usuário confirmou que a E5 deu certo e foi validada; o build também passou nesta sessão. Commit/push do E5 ainda precisa acionar o Pages |
 
 ### 22.6 Histórico de mudanças do plano
 | Versão | Data | Mudança | Motivo |
@@ -1996,6 +2028,10 @@ Casos extras: conexão lenta (3G simulado), vídeo sem áudio, vídeo vertical e
 | v26 | 19/11/2026 | Commit `f750615` da E3 enviado com sucesso para `origin/main`; deploy automático acionado. Status do GitHub Actions ainda não foi confirmado por limitação da CLI/web/Computer Use. E4 está autorizada e é a próxima implementação | Push concluído; tentativa de abrir Actions pelo Computer Use foi interrompida porque a ferramenta não reconheceu a URL ativa com confiança |
 | v27 | 19/11/2026 | E4 implementada no workspace para validação: inbox por cliente com Realtime e marcar como lida; métricas D21; atalho de retornos no dashboard; status 7.2–7.4 e 8.2–8.3 seguem em validação manual. Adicionado roteiro numerado E4; D35 registra decisão de inbox contextual | O usuário esclareceu que fará as validações no próprio computador; build e acesso real ao Supabase não foram executados nesta rodada |
 | v28 | 19/11/2026 | Usuário aceitou a E4 e autorizou o deploy; fases 7 e 8 marcadas como aceitas. E5 autorizada como última entrega do plano acelerado; P29 fechado | Usuário disse que está tudo certinho e quer partir para E5 |
+| v29 | 19/11/2026 | Commit `65ed136` da E4 enviado com sucesso para `origin/main`, acionando o workflow do Pages; E5 iniciada. O status Actions não foi confirmado. Falha inicial no `git add` por permissão de escrita em `.git` contornada com a permissão Git autorizada | O deploy E4 foi autorizado pelo usuário; o ambiente permitiu escrever arquivos do projeto, mas exigiu elevação para escrever no índice Git |
+| v30 | 19/11/2026 | Implementada E5 no workspace: cópia independente de posts/mídias e ação em lote; refinamentos de acessibilidade e lazy loading; guia Supabase e backup atualizados; roteiro com 16 validações. Build, Lighthouse, npm audit, Supabase e aceite do usuário aguardam validação; P16 resolvido, P30/P31 abertos | Usuário confirmou que E4 está certa, autorizou o deploy E4 e o início da última entrega; validações ficam a cargo do usuário |
+| v31 | 19/11/2026 | Validação solicitada pelo usuário: `npm run build` passou (`tsc --noEmit`, Vite 5.4.21, 139 módulos); Chrome abriu a página publicada em `/#/admin` com sessão preexistente, sem alterar dados. `npm run preview` iniciou, mas Chrome deu `ERR_CONNECTION_TIMED_OUT` e requisição local foi bloqueada/expirou; a automação foi encerrada pela proteção de URL ao tentar abrir Actions | Não foi possível validar E5 visualmente porque seu código ainda não está publicado e o preview local não ficou acessível no browser. P30 workflow e P31 QA E5 permanecem pendentes; build está resolvido |
+| v32 | 19/11/2026 | Usuário confirmou que a E5 deu certo, está tudo no ar e terminou; ao saber que o código E5 ainda não tinha sido enviado, autorizou explicitamente o deploy final. Build E5 já passou; fase 9 e aceite E5 registrados como concluídos; fase 10 aguarda push/Pages e data final de go-live | O E5 estava apenas no workspace, sem commit/push; autorização clara do usuário: fazer o deploy se ainda não tiver sido feito |
 | v15 | 19/11/2026 | Bloco 2b concluído (1.5 a 1.7 em `[x]`); **plano acelerado em 5 entregas proposto** (seção 16.0, D30, P24); admin sem etapa mock; duplicar/lote para a E5; sem `dnd-kit` | Usuário quer terminar mais rápido, com no máximo ~5 entregas |
 | v14 | 19/11/2026 | Bloco 2a concluído; bloco 2b entregue (1.5 a 1.7 em `[~]`); 1.3 e 1.4 `[x]`; estimativa de término; P23 resolvido | Usuário confirmou o 2a e pediu para seguir |
 | v13 | 19/11/2026 | Etapa 1 concluída; Etapa 2 em blocos 2a a 2e (D29); bloco 2a entregue (1.2 a 1.4 em `[~]`); P23 | Usuário deixou a ordem a critério do plano; telas portadas do protótipo, não redesenhadas |

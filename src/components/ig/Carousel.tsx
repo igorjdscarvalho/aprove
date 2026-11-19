@@ -77,7 +77,7 @@ export function Carousel({ slides, index, onIndex }: Props) {
           type="button"
           onClick={() => go(-1)}
           aria-label="Item anterior"
-          className="absolute left-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full bg-white/90 text-black"
+          className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black"
         >
           ‹
         </button>
@@ -87,7 +87,7 @@ export function Carousel({ slides, index, onIndex }: Props) {
           type="button"
           onClick={() => go(1)}
           aria-label="Próximo item"
-          className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full bg-white/90 text-black"
+          className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black"
         >
           ›
         </button>

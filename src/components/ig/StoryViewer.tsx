@@ -97,9 +97,9 @@ export function StoryViewer({ slug, stories, startIndex, client, onClose, onSubm
     onPointerCancel: () => setHold(false),
   });
 
-  const headBtn = 'flex h-9 w-9 items-center justify-center text-xl text-white';
+  const headBtn = 'flex h-11 w-11 items-center justify-center text-xl text-white';
   const arrow =
-    'absolute top-1/2 z-[5] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-white/75 shadow-sm backdrop-blur-sm transition-colors hover:bg-black/55 hover:text-white';
+    'absolute top-1/2 z-[5] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/30 text-white/75 shadow-sm backdrop-blur-sm transition-colors hover:bg-black/55 hover:text-white';
 
   return (
     <div

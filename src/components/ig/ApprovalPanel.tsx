@@ -84,7 +84,7 @@ export function ApprovalPanel({ post, onSubmit, onFormOpenChange, storyOverlay =
     }
   }
 
-  const btn = 'flex-1 rounded-lg px-3 py-2.5 font-semibold text-white disabled:opacity-50';
+  const btn = 'flex min-h-11 flex-1 items-center justify-center rounded-lg px-3 py-2.5 font-semibold text-white disabled:opacity-50';
 
   return (
     <div>
@@ -123,7 +123,7 @@ export function ApprovalPanel({ post, onSubmit, onFormOpenChange, storyOverlay =
             className="mt-1 w-full rounded-lg border border-line bg-bg p-2.5 text-fg"
           />
           <div className="mt-2.5 flex gap-2">
-            <button type="button" disabled={busy} onClick={() => void send('changes_requested')} className={`${btn} bg-ok`}>
+            <button type="button" disabled={busy} onClick={() => void send('changes_requested')} className={`${btn} bg-[#a85f00] hover:bg-[#8b4b00]`}>
               {busy ? 'Enviando…' : 'Enviar ajustes'}
             </button>
             <button
@@ -144,7 +144,7 @@ export function ApprovalPanel({ post, onSubmit, onFormOpenChange, storyOverlay =
         <div>
           <span
             className={`inline-block rounded-full px-3 py-1 text-[13px] font-semibold text-white ${
-              post.approval_status === 'approved' ? 'bg-ok' : 'bg-warn'
+              post.approval_status === 'approved' ? 'bg-[#267a45]' : 'bg-[#a85f00]'
             }`}
           >
             {post.approval_status === 'approved' ? '✓ Aprovado' : '✎ Ajustes solicitados'}
@@ -156,7 +156,7 @@ export function ApprovalPanel({ post, onSubmit, onFormOpenChange, storyOverlay =
         </div>
       ) : (
         <div className="flex gap-2">
-          <button type="button" disabled={busy} onClick={() => void send('approved')} className={`${btn} bg-ok`}>
+          <button type="button" disabled={busy} onClick={() => void send('approved')} className={`${btn} bg-[#267a45] hover:bg-[#1f6b3e]`}>
             {busy ? 'Enviando…' : '✓ Aprovar'}
           </button>
           <button
@@ -166,7 +166,7 @@ export function ApprovalPanel({ post, onSubmit, onFormOpenChange, storyOverlay =
               setForm(true);
               setError('');
             }}
-            className={`${btn} bg-warn`}
+            className={`${btn} bg-[#a85f00] hover:bg-[#8b4b00]`}
           >
             ✎ Não aprovar
           </button>

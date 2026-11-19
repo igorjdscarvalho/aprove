@@ -23,7 +23,7 @@ interface Props {
 }
 
 const navBtn =
-  'fixed top-1/2 z-[60] hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-xl text-black md:flex';
+  'fixed top-1/2 z-[60] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-xl text-black md:flex';
 
 // Visualizador de publicação (seção 11.5): modal em 2 colunas no desktop, tela cheia no celular.
 export function PostViewer({ posts, index, client, onNavigate, onClose, onSubmitReview, adminPreview = false, onEdit }: Props) {
@@ -99,7 +99,7 @@ export function PostViewer({ posts, index, client, onNavigate, onClose, onSubmit
         type="button"
         onClick={onClose}
         aria-label="Fechar"
-        className="fixed right-3.5 top-3 z-[60] h-10 w-10 text-[22px] text-white drop-shadow"
+        className="fixed right-3.5 top-3 z-[60] h-11 w-11 text-[22px] text-white drop-shadow"
       >
         ✕
       </button>

@@ -17,8 +17,10 @@ import { mediaSrc } from '@/lib/mediaSrc';
 import { supabase } from '@/lib/supabase';
 import {
   deleteClientPost,
+  duplicateClientPost,
   listClientPosts,
   markReviewRead,
+  setClientPostsVisibility,
   setPostVisibility,
   type AdminPost,
   type AdminReview,
@@ -77,6 +79,9 @@ export function ClientWorkspacePage() {
   const [listMonth, setListMonth] = useState('all');
   const [viewerPostId, setViewerPostId] = useState<string | null>(null);
   const [storyStart, setStoryStart] = useState<number | null>(null);
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(() => new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState('');
   const month = useMonthFilter();
 
   const refresh = useCallback(async () => {
@@ -119,10 +124,14 @@ export function ClientWorkspacePage() {
   }), [posts, listMonth, postType, approvalStatus]);
   const monthOptions = useMemo(() => [...new Set(posts.map((post) => post.scheduled_date.slice(0, 7)))].sort().reverse(), [posts]);
   const unreadReviews = useMemo(() => posts.reduce((total, post) => total + post.reviews.filter((review) => !review.read_at).length, 0), [posts]);
+  const filteredDrafts = useMemo(() => filteredPosts.filter((post) => !post.is_visible), [filteredPosts]);
+  const selectedDrafts = filteredDrafts.filter((post) => selectedPostIds.has(post.id));
+  const allDraftsSelected = filteredDrafts.length > 0 && filteredDrafts.every((post) => selectedPostIds.has(post.id));
 
   async function toggleVisibility(post: AdminPost) {
     try {
       await setPostVisibility(post.id, !post.is_visible);
+      setSelectedPostIds((current) => new Set([...current].filter((id) => id !== post.id)));
       setNotice(post.is_visible ? 'Publicação ocultada do cliente.' : 'Publicação visível para o cliente.');
       await refresh();
     } catch (cause) {
@@ -134,6 +143,7 @@ export function ClientWorkspacePage() {
     if (!window.confirm(`Excluir esta publicação de ${client?.name ?? 'cliente'}? O arquivo também será removido do Storage.`)) return;
     try {
       const result = await deleteClientPost(post.id);
+      setSelectedPostIds((current) => new Set([...current].filter((id) => id !== post.id)));
       setNotice(result.warning ?? 'Publicação excluída.');
       await refresh();
     } catch (cause) {
@@ -154,6 +164,60 @@ export function ClientWorkspacePage() {
   async function markRead(review: AdminReview) {
     await markReviewRead(review.id);
     await refresh();
+  }
+
+  function togglePostSelected(post: AdminPost, checked: boolean) {
+    if (post.is_visible) return;
+    setSelectedPostIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(post.id);
+      else next.delete(post.id);
+      return next;
+    });
+  }
+
+  function toggleFilteredDrafts() {
+    setSelectedPostIds((current) => {
+      const next = new Set(current);
+      for (const post of filteredDrafts) {
+        if (allDraftsSelected) next.delete(post.id);
+        else next.add(post.id);
+      }
+      return next;
+    });
+  }
+
+  async function makeSelectedVisible() {
+    const ids = selectedDrafts.map((post) => post.id);
+    if (!ids.length || bulkSaving || duplicatingId) return;
+    if (!window.confirm(`Tornar ${ids.length} publicação(ões) visíveis para ${client?.name ?? 'este cliente'}?`)) return;
+    setBulkSaving(true);
+    setError('');
+    try {
+      await setClientPostsVisibility(clientId, ids, true);
+      setSelectedPostIds((current) => new Set([...current].filter((id) => !ids.includes(id))));
+      setNotice(`${ids.length} publicação(ões) agora estão visíveis para o cliente.`);
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível tornar as publicações visíveis.');
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function duplicatePost(post: AdminPost) {
+    if (bulkSaving || duplicatingId) return;
+    setDuplicatingId(post.id);
+    setError('');
+    try {
+      const result = await duplicateClientPost(clientId, post.id);
+      setNotice(result.warning ?? 'Cópia criada como rascunho oculto.');
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível duplicar a publicação.');
+    } finally {
+      setDuplicatingId('');
+    }
   }
 
   function selectTab(next: WorkspaceTab) {
@@ -188,7 +252,7 @@ export function ClientWorkspacePage() {
             <p className="text-sm text-muted">@{client.username} · {client.slug}</p>
             <h2 className="mt-1 text-xl font-bold">Espaço do cliente</h2>
           </div>
-          <span className={`rounded-full border border-line px-3 py-1 text-xs font-semibold ${client.status === 'published' ? 'text-ok' : 'text-muted'}`}>
+          <span className={`rounded-full border border-line px-3 py-1 text-xs font-semibold ${client.status === 'published' ? 'text-[#1f6b3e] dark:text-[#87e7aa]' : 'text-muted'}`}>
             {client.status === 'published' ? 'Publicado' : client.status === 'archived' ? 'Arquivado' : 'Não publicado'}
           </span>
         </div>
@@ -231,27 +295,51 @@ export function ClientWorkspacePage() {
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               <label className="text-sm">Tipo
-                <select value={postType} onChange={(event) => setPostType(event.target.value as PostTypeFilter)} className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2">
+                <select value={postType} onChange={(event) => { setPostType(event.target.value as PostTypeFilter); setSelectedPostIds(new Set()); }} className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2">
                   <option value="all">Todos os tipos</option>{Object.entries(TYPE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label>
               <label className="text-sm">Avaliação
-                <select value={approvalStatus} onChange={(event) => setApprovalStatus(event.target.value as StatusFilter)} className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2">
+                <select value={approvalStatus} onChange={(event) => { setApprovalStatus(event.target.value as StatusFilter); setSelectedPostIds(new Set()); }} className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2">
                   <option value="all">Todos os status</option>{Object.entries(STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label>
               <label className="text-sm">Mês
-                <select value={listMonth} onChange={(event) => setListMonth(event.target.value)} className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2">
+                <select value={listMonth} onChange={(event) => { setListMonth(event.target.value); setSelectedPostIds(new Set()); }} className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2">
                   <option value="all">Todos os meses</option>{monthOptions.map((key) => <option key={key} value={key}>{formatMonthLabel(key)}</option>)}
                 </select>
               </label>
             </div>
+            {filteredDrafts.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2">
+                <button type="button" disabled={bulkSaving || !!duplicatingId} onClick={toggleFilteredDrafts} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-50">
+                  {allDraftsSelected ? 'Desmarcar rascunhos filtrados' : 'Selecionar rascunhos filtrados'} ({filteredDrafts.length})
+                </button>
+                {selectedDrafts.length > 0 && (
+                  <>
+                    <span className="text-sm text-muted">{selectedDrafts.length} selecionado(s)</span>
+                    <button type="button" disabled={bulkSaving || !!duplicatingId} onClick={() => void makeSelectedVisible()} className="min-h-11 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                      {bulkSaving ? 'Salvando…' : 'Tornar visíveis'}
+                    </button>
+                    <button type="button" disabled={bulkSaving || !!duplicatingId} onClick={() => setSelectedPostIds(new Set())} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-50">Limpar seleção</button>
+                  </>
+                )}
+              </div>
+            )}
             {filteredPosts.length ? (
               <ul className="mt-4 space-y-3">
                 {filteredPosts.map((post) => (
                   <li key={post.id} className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 sm:flex-row sm:items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedPostIds.has(post.id)}
+                      disabled={post.is_visible || bulkSaving || !!duplicatingId}
+                      onChange={(event) => togglePostSelected(post, event.target.checked)}
+                      aria-label={`Selecionar rascunho ${TYPE_LABEL[post.type]} de ${post.scheduled_date}`}
+                      className="h-5 w-5 shrink-0 accent-accent disabled:opacity-40"
+                    />
                     <div className="h-24 w-20 shrink-0 overflow-hidden rounded bg-line">
-                      {post.media[0] && <img src={mediaSrc(thumbPath(post))} alt="" className="h-full w-full object-cover" />}
+                      {post.media[0] && <img src={mediaSrc(thumbPath(post))} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -262,9 +350,10 @@ export function ClientWorkspacePage() {
                       <p className="mt-1 text-xs text-muted">{post.is_visible ? 'Visível ao cliente' : 'Rascunho oculto'} · {STATUS_LABEL[post.approval_status]} · Revisão {post.revision}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => navigate(`/admin/clients/${clientId}/posts/${post.id}`)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold">Editar</button>
-                      <button type="button" onClick={() => void toggleVisibility(post)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold">{post.is_visible ? 'Ocultar' : 'Mostrar'}</button>
-                      <button type="button" onClick={() => void removePost(post)} className="rounded-lg border border-bad px-3 py-2 text-sm font-semibold text-bad">Excluir</button>
+                      <button type="button" onClick={() => navigate(`/admin/clients/${clientId}/posts/${post.id}`)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold">Editar</button>
+                      <button type="button" disabled={bulkSaving || !!duplicatingId} onClick={() => void duplicatePost(post)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-50">{duplicatingId === post.id ? 'Duplicando…' : 'Duplicar'}</button>
+                      <button type="button" disabled={bulkSaving || !!duplicatingId} onClick={() => void toggleVisibility(post)} className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold disabled:opacity-50">{post.is_visible ? 'Ocultar' : 'Mostrar'}</button>
+                      <button type="button" disabled={bulkSaving || !!duplicatingId} onClick={() => void removePost(post)} className="min-h-11 rounded-lg border border-bad px-3 py-2 text-sm font-semibold text-bad disabled:opacity-50">Excluir</button>
                     </div>
                   </li>
                 ))}
