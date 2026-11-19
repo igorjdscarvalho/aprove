@@ -1,0 +1,9 @@
+import { createClient } from '@supabase/supabase-js';
+import { env } from '@/config/env';
+
+export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+});
+
+export const mediaUrl = (path?: string | null) =>
+  path ? `${env.SUPABASE_URL}/storage/v1/object/public/media/${path}` : '';
