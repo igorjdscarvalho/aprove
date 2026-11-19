@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Spinner } from '@/components/ui/Spinner';
-import { mediaUrl } from '@/lib/supabase';
+import { mediaUrl, supabase } from '@/lib/supabase';
 import { checkClientGate, deleteClient, listClients, setClientStatus } from '@/providers/admin/SupabaseAdminProvider';
 import type { ClientSummary } from '@/providers/admin/types';
 
@@ -63,6 +63,14 @@ export function AdminDashboard() {
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-dashboard-reviews')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => { void refresh(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
   }, [refresh]);
 
   const visible = useMemo(() => {
@@ -206,6 +214,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   <Link to={`/admin/clients/${client.id}`} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg">Abrir</Link>
+                  {client.unread_reviews > 0 && <Link to={`/admin/clients/${client.id}?tab=approvals`} className="rounded-lg border border-accent px-3 py-2 text-sm font-semibold text-accent hover:bg-bg">Ver retornos ({client.unread_reviews})</Link>}
                   <Link to={`/admin/clients/${client.id}/edit`} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg">Editar</Link>
                   <button type="button" disabled={gateBusyId === client.id} onClick={() => void testLink(client)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg disabled:opacity-50">{gateBusyId === client.id ? 'Verificando…' : 'Testar link'}</button>
                   <button type="button" onClick={() => void copyLink(client)} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-bg">Copiar link</button>

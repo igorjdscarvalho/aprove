@@ -7,8 +7,9 @@ export interface AdminMedia extends Media {
   size_bytes: number;
 }
 
-export type AdminPost = Omit<Post, 'media'> & {
+export type AdminPost = Omit<Post, 'media' | 'reviews'> & {
   media: AdminMedia[];
+  reviews: AdminReview[];
   client_id: string;
   is_visible: boolean;
   created_at: string;
@@ -76,7 +77,7 @@ function mapReview(row: Record<string, unknown>): AdminReview {
   };
 }
 
-function mapPost(row: Record<string, unknown>, media: AdminMedia[], reviews: Review[]): AdminPost {
+function mapPost(row: Record<string, unknown>, media: AdminMedia[], reviews: AdminReview[]): AdminPost {
   return {
     id: String(row.id),
     client_id: String(row.client_id),
@@ -124,7 +125,7 @@ export async function listClientPosts(clientId: string): Promise<AdminPost[]> {
     const key = String(row.post_id);
     mediaByPost.set(key, [...(mediaByPost.get(key) ?? []), mapMedia(row as unknown as Record<string, unknown>)]);
   }
-  const reviewsByPost = new Map<string, Review[]>();
+  const reviewsByPost = new Map<string, AdminReview[]>();
   for (const raw of reviewsResult.data ?? []) {
     const review = mapReview(raw as unknown as Record<string, unknown>);
     reviewsByPost.set(review.post_id, [...(reviewsByPost.get(review.post_id) ?? []), review]);
@@ -133,6 +134,15 @@ export async function listClientPosts(clientId: string): Promise<AdminPost[]> {
     const key = String(row.id);
     return mapPost(row as unknown as Record<string, unknown>, mediaByPost.get(key) ?? [], reviewsByPost.get(key) ?? []);
   });
+}
+
+export async function markReviewRead(reviewId: string): Promise<void> {
+  const { error } = await supabase
+    .from('reviews')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', reviewId)
+    .is('read_at', null);
+  if (error) fail(error);
 }
 
 export async function getClientPost(clientId: string, postId: string): Promise<AdminPost> {

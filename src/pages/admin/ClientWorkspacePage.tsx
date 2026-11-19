@@ -8,19 +8,37 @@ import { PostViewer } from '@/components/ig/PostViewer';
 import { ProfileHeader } from '@/components/ig/ProfileHeader';
 import { ProfileTabs } from '@/components/ig/ProfileTabs';
 import { StoryViewer } from '@/components/ig/StoryViewer';
+import { ClientMetrics } from '@/components/admin/ClientMetrics';
+import { ReviewInbox } from '@/components/admin/ReviewInbox';
 import { useMonthFilter } from '@/hooks/useMonthFilter';
 import { formatMonthLabel } from '@/lib/dates';
 import { gridPosts, monthPosts, monthStories, thumbPath, type GridTab } from '@/lib/posts';
 import { mediaSrc } from '@/lib/mediaSrc';
-import { listClientPosts, setPostVisibility, deleteClientPost, type AdminPost } from '@/providers/admin/SupabasePostProvider';
+import { supabase } from '@/lib/supabase';
+import {
+  deleteClientPost,
+  listClientPosts,
+  markReviewRead,
+  setPostVisibility,
+  type AdminPost,
+  type AdminReview,
+} from '@/providers/admin/SupabasePostProvider';
 import { getClient } from '@/providers/admin/SupabaseAdminProvider';
 import type { AdminClient } from '@/providers/admin/types';
 import type { ClientProfile } from '@/types/domain';
 import type { Post } from '@/types/domain';
 
-type WorkspaceTab = 'feed' | 'posts' | 'settings';
+type WorkspaceTab = 'feed' | 'posts' | 'approvals' | 'metrics' | 'settings';
 type PostTypeFilter = 'all' | AdminPost['type'];
 type StatusFilter = 'all' | AdminPost['approval_status'];
+
+const WORKSPACE_TABS: { id: WorkspaceTab; label: string }[] = [
+  { id: 'feed', label: 'Feed' },
+  { id: 'posts', label: 'Publicações' },
+  { id: 'approvals', label: 'Aprovações' },
+  { id: 'metrics', label: 'Métricas' },
+  { id: 'settings', label: 'Configurações' },
+];
 
 const TYPE_LABEL: Record<AdminPost['type'], string> = { image: 'Imagem', carousel: 'Carrossel', reel: 'Reels', story: 'Story' };
 const STATUS_LABEL: Record<AdminPost['approval_status'], string> = {
@@ -49,7 +67,10 @@ export function ClientWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(() => (location.state as { notice?: string } | null)?.notice ?? '');
-  const [tab, setTab] = useState<WorkspaceTab>('feed');
+  const [tab, setTab] = useState<WorkspaceTab>(() => {
+    const requested = new URLSearchParams(location.search).get('tab');
+    return requested === 'approvals' || requested === 'metrics' ? requested : 'feed';
+  });
   const [gridTab, setGridTab] = useState<GridTab>('posts');
   const [postType, setPostType] = useState<PostTypeFilter>('all');
   const [approvalStatus, setApprovalStatus] = useState<StatusFilter>('all');
@@ -73,6 +94,19 @@ export function ClientWorkspacePage() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`admin-reviews-${clientId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'reviews',
+        filter: `client_id=eq.${clientId}`,
+      }, () => { void refresh(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [clientId, refresh]);
+
   const publicPosts = useMemo(() => posts.filter((post) => post.is_visible), [posts]);
   const feedStories = useMemo(() => monthStories(publicPosts, month.filter), [publicPosts, month.filter]);
   const shownPosts = useMemo(() => gridPosts(publicPosts, month.filter, gridTab), [publicPosts, month.filter, gridTab]);
@@ -84,6 +118,7 @@ export function ClientWorkspacePage() {
       (approvalStatus === 'all' || post.approval_status === approvalStatus) && monthMatches;
   }), [posts, listMonth, postType, approvalStatus]);
   const monthOptions = useMemo(() => [...new Set(posts.map((post) => post.scheduled_date.slice(0, 7)))].sort().reverse(), [posts]);
+  const unreadReviews = useMemo(() => posts.reduce((total, post) => total + post.reviews.filter((review) => !review.read_at).length, 0), [posts]);
 
   async function toggleVisibility(post: AdminPost) {
     try {
@@ -114,6 +149,16 @@ export function ClientWorkspacePage() {
 
   function editPost(post: Post) {
     navigate(`/admin/clients/${clientId}/posts/${post.id}`);
+  }
+
+  async function markRead(review: AdminReview) {
+    await markReviewRead(review.id);
+    await refresh();
+  }
+
+  function selectTab(next: WorkspaceTab) {
+    setTab(next);
+    navigate({ pathname: location.pathname, search: `?tab=${next}` }, { replace: true });
   }
 
   const tabClass = (active: boolean) => `border-b-2 px-3 py-3 text-sm font-semibold ${active ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-fg'}`;
@@ -149,8 +194,10 @@ export function ClientWorkspacePage() {
         </div>
 
         <nav className="mt-5 flex gap-2 overflow-x-auto border-b border-line" aria-label="Abas do espaço do cliente">
-          {([['feed', 'Feed'], ['posts', 'Publicações'], ['settings', 'Configurações']] as const).map(([id, label]) => (
-            <button key={id} type="button" onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined} className={tabClass(tab === id)}>{label}</button>
+          {WORKSPACE_TABS.map(({ id, label }) => (
+            <button key={id} type="button" onClick={() => selectTab(id)} aria-current={tab === id ? 'page' : undefined} className={tabClass(tab === id)}>
+              {label}{id === 'approvals' && unreadReviews > 0 && <span className="ml-1 rounded-full bg-accent px-1.5 py-0.5 text-[10px] text-white">{unreadReviews}</span>}
+            </button>
           ))}
         </nav>
 
@@ -225,6 +272,16 @@ export function ClientWorkspacePage() {
             ) : <p className="mt-8 rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">Nenhuma publicação corresponde a esses filtros.</p>}
           </section>
         )}
+
+        {tab === 'approvals' && (
+          <ReviewInbox
+            posts={posts}
+            onOpenPost={(post) => navigate(`/admin/clients/${clientId}/posts/${post.id}`)}
+            onMarkRead={markRead}
+          />
+        )}
+
+        {tab === 'metrics' && <ClientMetrics posts={posts} />}
 
         {tab === 'settings' && (
           <section className="mt-5 rounded-xl border border-line bg-surface p-5">
