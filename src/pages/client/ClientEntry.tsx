@@ -77,7 +77,7 @@ export function ClientEntry() {
         />
       );
     case 'feed':
-      return <ClientFeed feed={view.feed} onLogout={() => void leave()} />;
+      return <ClientFeed slug={slug} feed={view.feed} onLogout={() => void leave()} />;
     default:
       return null;
   }
